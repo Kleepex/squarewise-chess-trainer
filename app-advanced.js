@@ -64,23 +64,29 @@
       }
       if(line.startsWith('info ')){
         const info=parseEngineInfo(line);
-        if(this.current){this.current.latest=info;if(this.current.onInfo)this.current.onInfo(info);}
+        if(this.current){
+          const rank=info.multipv||1,previous=this.current.candidates.get(rank);
+          if(!previous||info.depth>=previous.depth)this.current.candidates.set(rank,info);
+          if(rank===1)this.current.latest=info;
+          if(this.current.onInfo)this.current.onInfo(info);
+        }
         return;
       }
       if(line.startsWith('bestmove ')){
         if(!this.current)return;
         const current=this.current;this.current=null;clearTimeout(current.timer);
         const move=line.match(/^bestmove\s+(\S+)/)?.[1]||'';
-        current.resolve({...current.latest,bestMove:move,raw:line});
+        const candidates=Array.from(current.candidates.entries()).sort((a,b)=>a[0]-b[0]).map(([multipv,info])=>({...info,multipv,bestMove:info.pv?.trim().split(/\s+/)[0]||''}));
+        current.resolve({...current.latest,bestMove:move,candidates,raw:line});
       }
     }
-    search(fen,{depth=10,movetime=0,skill=20,onInfo=null,timeoutMs=45000}={}){
-      const task=()=>this._search(fen,{depth,movetime,skill,onInfo,timeoutMs});
+    search(fen,{depth=10,movetime=0,skill=20,multipv=1,onInfo=null,timeoutMs=45000}={}){
+      const task=()=>this._search(fen,{depth,movetime,skill,multipv,onInfo,timeoutMs});
       const result=this.queue.then(task,task);
       this.queue=result.catch(()=>{});
       return result;
     }
-    async _search(fen,{depth,movetime,skill,onInfo,timeoutMs}){
+    async _search(fen,{depth,movetime,skill,multipv,onInfo,timeoutMs}){
       await this.init();
       if(!this.worker)throw new Error('Stockfish worker is unavailable.');
       return new Promise((resolve,reject)=>{
@@ -88,14 +94,16 @@
         const requestedMoveTime=Number(movetime);
         const safeMoveTime=Number.isFinite(requestedMoveTime)&&requestedMoveTime>0?Math.max(50,Math.min(5000,requestedMoveTime)):0;
         const safeSkill=Math.max(0,Math.min(20,Number(skill)||0));
+        const safeMultiPv=Math.max(1,Math.min(3,Math.round(Number(multipv)||1)));
         const timer=setTimeout(()=>{
           if(this.current?.resolve===resolve){this.current=null;try{this.worker?.postMessage('stop');}catch(_){}reject(new Error('Engine search timed out. Try a lower depth.'));}
         },timeoutMs);
-        this.current={resolve,reject,timer,onInfo,latest:{depth:0,score:{type:'cp',value:0},pv:'',nodes:0}};
+        this.current={resolve,reject,timer,onInfo,latest:{depth:0,score:{type:'cp',value:0},pv:'',nodes:0},candidates:new Map()};
         try{
           this.worker.postMessage('setoption name Threads value 1');
           this.worker.postMessage('setoption name Hash value 64');
           this.worker.postMessage(`setoption name Skill Level value ${safeSkill}`);
+          this.worker.postMessage(`setoption name MultiPV value ${safeMultiPv}`);
           this.worker.postMessage('ucinewgame');
           this.worker.postMessage(`position fen ${fen}`);
           this.worker.postMessage(safeMoveTime?`go movetime ${safeMoveTime}`:`go depth ${safeDepth}`);
@@ -107,9 +115,10 @@
   function parseEngineInfo(line){
     const depth=Number(line.match(/\bdepth\s+(\d+)/)?.[1]||0);
     const nodes=Number(line.match(/\bnodes\s+(\d+)/)?.[1]||0);
+    const multipv=Number(line.match(/\bmultipv\s+(\d+)/)?.[1]||1);
     const scoreMatch=line.match(/\bscore\s+(cp|mate)\s+(-?\d+)/);
     const pv=line.match(/\bpv\s+(.+)$/)?.[1]||'';
-    return {depth,nodes,score:scoreMatch?{type:scoreMatch[1],value:Number(scoreMatch[2])}:{type:'cp',value:0},pv,raw:line};
+    return {depth,nodes,multipv,score:scoreMatch?{type:scoreMatch[1],value:Number(scoreMatch[2])}:{type:'cp',value:0},pv,raw:line};
   }
   const engine=new StockfishClient();
   function engineStatusMarkup(){
@@ -162,6 +171,41 @@
       }
     }
     return html+'</div></div>';
+  }
+  function engineCandidateMoves(info,fen){
+    if(!ChessClass||!info)return [];
+    const source=Array.isArray(info.candidates)&&info.candidates.length?info.candidates:[{multipv:1,bestMove:info.bestMove,pv:info.pv,score:info.score}];
+    return source.slice(0,3).map((candidate,index)=>{
+      const bestMove=candidate.bestMove||candidate.pv?.trim().split(/\s+/)[0]||'';
+      const move=uciMove(bestMove);if(!move)return null;
+      let san='';try{san=new ChessClass(fen).move(move)?.san||'';}catch(_){}
+      return {...candidate,bestMove,multipv:candidate.multipv||index+1,san,from:move.from,to:move.to};
+    }).filter(Boolean);
+  }
+  function reviewArrows(gameViewer,options){
+    const arrows=new Map(options.map(option=>[option.bestMove,{from:option.from,to:option.to,color:'green'}]));
+    const played=gameViewer.moves[gameViewer.ply];
+    const verdict=gameViewer.moveVerdicts?.find(item=>item.ply===gameViewer.ply+1)||gameViewer.report?.find(item=>item.ply===gameViewer.ply+1);
+    if(played&&verdict){
+      const uci=moveToUci(played);
+      arrows.set(uci,{from:played.from,to:played.to,color:verdict.lossCp>=70?'red':'green'});
+    }
+    return Array.from(arrows.values());
+  }
+  function arrowSvgMarkup(arrows){
+    const point=square=>{
+      if(!/^[a-h][1-8]$/.test(square||''))return null;
+      const file=square.charCodeAt(0)-97,rank=Number(square[1]);
+      return [file+.5,8-rank+.5];
+    };
+    const lines=arrows.map(arrow=>{
+      const from=point(arrow.from),to=point(arrow.to);if(!from||!to)return '';
+      const color=arrow.color==='red'?'red':'green';
+      const stroke=color==='red'?'#d43f3a':'#258447';
+      return `<line x1="${from[0]}" y1="${from[1]}" x2="${to[0]}" y2="${to[1]}" stroke="${stroke}" stroke-width=".13" stroke-linecap="round" opacity=".88" marker-end="url(#squarewise-arrow-${color})"/>`;
+    }).join('');
+    if(!lines)return '';
+    return `<svg aria-hidden="true" viewBox="0 0 8 8" style="position:absolute;inset:5px;width:calc(100% - 10px);height:calc(100% - 10px);pointer-events:none;z-index:4;overflow:visible"><defs><marker id="squarewise-arrow-green" viewBox="0 0 1 1" refX=".86" refY=".5" markerWidth=".8" markerHeight=".8" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 0 L 1 .5 L 0 1 z" fill="#258447"/></marker><marker id="squarewise-arrow-red" viewBox="0 0 1 1" refX=".86" refY=".5" markerWidth=".8" markerHeight=".8" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 0 L 1 .5 L 0 1 z" fill="#d43f3a"/></marker></defs>${lines}</svg>`;
   }
   function sanLineFromUci(fen,line){
     if(!ChessClass||!line)return '';
@@ -422,7 +466,10 @@
     try{
       const chess=new ChessClass();chess.loadPgn(game.pgn,{strict:false});
       const moves=chess.history({verbose:true});
-      viewer={index:Number(index),game,moves,ply:0,positionAnalysis:null,positionCache:new Map(),report:game.engineReview?.mistakes||null,analyzing:false,progressText:'',budgetMs:game.engineReview?.budgetMs||250,analysisBudget:game.engineReview?.budgetMs||null,truncated:false};
+      const report=game.engineReview?.mistakes||null,positionCache=new Map();
+      for(const item of report||[])if(item.fen)positionCache.set(item.fen,{fen:item.fen,bestMove:item.bestMoveUci,pv:item.pv,candidates:item.candidates||[{multipv:1,bestMove:item.bestMoveUci,pv:item.pv}]});
+      const initialFen=moves.length?moves[0].before:new ChessClass().fen();
+      viewer={index:Number(index),game,moves,ply:0,positionAnalysis:positionCache.get(initialFen)||null,positionCache,moveVerdicts:game.engineReview?.moveVerdicts||[],report,analyzing:false,progressText:'',budgetMs:game.engineReview?.budgetMs||250,analysisBudget:game.engineReview?.budgetMs||null,truncated:false};
       renderGameViewer();
     }catch(error){api.showToast(`Could not replay this PGN: ${error?.message||'invalid move text'}`);}
   }
@@ -433,7 +480,7 @@
     if(!report.length)return `<div class="viewer-engine-card"><div class="viewer-engine-head"><strong>Full-game review</strong><span class="source-badge">${gameViewer.analysisBudget||gameViewer.budgetMs||250} ms / position</span></div><p class="small-muted" style="margin:8px 0 0">No large evaluation drops were found in this quick scan. This is not a guarantee that every move is perfect.</p>${gameViewer.truncated?'<p class="small-muted">The scan was limited to the first 100 plies for speed.</p>':''}</div>`;
     return `<div class="viewer-engine-card"><div class="viewer-engine-head"><strong>Key moments · ${report.length}</strong><span class="source-badge">${gameViewer.analysisBudget||gameViewer.budgetMs||250} ms / position</span><button class="text-link" data-action="build-all-drills">Save high-impact drills →</button></div><div class="mistake-list">${report.map((item,index)=>`<div class="mistake-item"><span class="mistake-badge ${item.severity==='Inaccuracy'?'inaccuracy':''}">${esc(item.severity)}</span><div class="mistake-copy"><strong>${Math.ceil(item.ply/2)}.${item.ply%2?'':'…'} ${esc(item.move)} · −${pawnLoss(item.lossCp)}</strong><span>Engine choice ${esc(item.bestMoveSan||item.bestMoveUci||'—')} · ${esc(item.coach)}</span></div><button class="outline-button" data-action="build-drill" data-mistake-index="${index}">Make drill</button></div>`).join('')}</div>${gameViewer.truncated?'<p class="small-muted" style="margin:8px 0 0">Analysis was limited to the first 100 plies for speed.</p>':''}</div>`;
   }
-  function renderGameViewer(){
+  function renderGameViewerMarkup(){
     if(!viewer)return;
     const gameViewer=viewer;
     const fen=positionFenAt(gameViewer,gameViewer.ply);
@@ -442,6 +489,27 @@
     const moveGrid=gameViewer.moves.length?`<div class="viewer-moves">${gameViewer.moves.map((move,index)=>`<div class="viewer-move-row"><span>${index%2===0?`${Math.floor(index/2)+1}.`:''}</span><button class="${gameViewer.ply===index+1?'current':''}" data-view-ply="${index+1}">${esc(move.san)}</button>${index%2===1?'<span></span>':''}</div>`).join('')}</div>`:'<p class="small-muted">No moves were found in this PGN.</p>';
     $('#modal-root').innerHTML=`<div class="modal-backdrop" data-action="backdrop-close"><section class="modal-panel modal-wide" role="dialog" aria-modal="true" aria-labelledby="viewer-title"><div class="modal-head"><div><div class="eyebrow">${esc(gameViewer.game.opening||'GAME REPLAY')} · LOCAL ENGINE REVIEW</div><h2 id="viewer-title">${esc(gameViewer.game.white)} <span style="color:#98a295">vs</span> ${esc(gameViewer.game.black)}</h2><p>${esc(gameViewer.game.date||'Date not set')} · ${gameViewer.moves.length} half-moves · result ${esc(gameViewer.game.result||'—')}</p></div><button class="icon-button modal-close" data-action="close-modal" aria-label="Close">×</button></div><div class="viewer-layout"><div class="viewer-board-column"><div class="drill-board">${boardMarkup(fen,{orientation:'w',lastMove:currentMove})}</div><div class="viewer-controls"><button data-action="viewer-first" aria-label="First position">|◀</button><button data-action="viewer-prev" aria-label="Previous move">◀</button><span>${gameViewer.ply===0?'Start':`${Math.ceil(gameViewer.ply/2)}.${gameViewer.ply%2?'…':' white'}`} / ${gameViewer.moves.length}</span><button data-action="viewer-next" aria-label="Next move">▶</button><button data-action="viewer-last" aria-label="Last position">▶|</button></div></div><div><div class="viewer-engine-card"><div class="viewer-engine-head"><strong>Position analysis</strong>${engineStatusMarkup()}</div>${result}<div class="analysis-actions"><label class="small-muted">Full-game budget <select class="depth-select" id="analysis-depth"><option value="120" ${gameViewer.budgetMs===120?'selected':''}>Quick · 120 ms</option><option value="250" ${gameViewer.budgetMs===250?'selected':''}>Standard · 250 ms</option><option value="500" ${gameViewer.budgetMs===500?'selected':''}>Deep · 500 ms</option></select></label><button class="primary-button" data-action="analyze-position" ${gameViewer.analyzing?'disabled':''}>Analyze position</button><button class="outline-button" data-action="analyze-game" ${gameViewer.analyzing?'disabled':''}>Analyze full game</button></div><div id="analysis-progress" class="analysis-progress">${esc(gameViewer.progressText||'Engine analysis stays local in your browser.')}</div></div>${reportMarkup(gameViewer)}<div class="panel-head" style="margin:15px 0 7px"><div><h3>Moves</h3><p>Tap any move to replay that position.</p></div></div>${moveGrid}<div class="analysis-actions" style="margin-top:10px"><button class="quiet-button" data-action="go-to-drills">Personal game drills (${getState().drills.length}) →</button></div></div></div></section></div>`;
   }
+  function renderGameViewer(){
+    renderGameViewerMarkup();
+    if(!viewer)return;
+    const gameViewer=viewer,fen=positionFenAt(gameViewer,gameViewer.ply);
+    const info=gameViewer.positionCache.get(fen)||(gameViewer.positionAnalysis?.fen===fen?gameViewer.positionAnalysis:null);
+    const options=engineCandidateMoves(info,fen);
+    const board=$('#modal-root .viewer-board-column .chessboard');
+    if(board){
+      const arrows=reviewArrows(gameViewer,options);
+      if(arrows.length){board.style.position='relative';board.insertAdjacentHTML('beforeend',arrowSvgMarkup(arrows));}
+    }
+    const card=$('#modal-root .viewer-board-column')?.nextElementSibling?.querySelector('.viewer-engine-card');
+    if(card&&options.length){
+      const summary=document.createElement('div');summary.className='engine-options small-muted';summary.style.cssText='margin-top:10px;display:grid;gap:5px';
+      summary.innerHTML=`<strong>Stockfish options</strong>${options.map(option=>`<span>${option.multipv}. ${esc(option.san||option.bestMove)} · ${scoreSideLabel(option,fen)}</span>`).join('')}<span>Green: engine candidate or move within 0.70 pawns. Red: played move losing at least 0.70 pawns.</span>`;
+      card.appendChild(summary);
+    }
+    $$('.mistake-copy').forEach((copy,index)=>{
+      const button=document.createElement('button');button.type='button';button.className='text-link';button.dataset.action='show-mistake';button.dataset.mistakeIndex=String(index);button.textContent='Show on board';copy.appendChild(button);
+    });
+  }
   async function analyzeViewerPosition(){
     if(!viewer||viewer.analyzing)return;
     const session=viewer,fen=positionFenAt(session,session.ply),cached=session.positionCache.get(fen);
@@ -449,7 +517,7 @@
     session.analyzing=true;session.progressText='Loading Stockfish Lite…';renderGameViewer();
     try{
       const depth=13;
-      const info=await engine.search(fen,{depth,skill:20,timeoutMs:60000,onInfo:(line)=>{if(viewer===session){session.progressText=`Searching position · depth ${line.depth||0}…`;const node=$('#analysis-progress');if(node)node.textContent=session.progressText;}}});
+      const info=await engine.search(fen,{depth,skill:20,multipv:3,timeoutMs:60000,onInfo:(line)=>{if(viewer===session){session.progressText=`Searching position · depth ${line.depth||0}…`;const node=$('#analysis-progress');if(node)node.textContent=session.progressText;}}});
       info.fen=fen;session.positionCache.set(fen,info);
       if(viewer===session){session.positionAnalysis=info;session.progressText=`Finished at depth ${info.depth||depth}.`;}
     }catch(error){if(viewer===session)session.progressText=error?.message||'Position analysis failed.';}
@@ -469,27 +537,29 @@
         const fen=index===0?(session.moves[0]?.before||new ChessClass().fen()):session.moves[index-1].after;
         session.progressText=`Analyzing position ${index+1} of ${total} · ${budgetMs} ms budget`;
         const progress=$('#game-analysis-progress');if(progress)progress.textContent=session.progressText;
-        const info=await engine.search(fen,{movetime:budgetMs,skill:20,timeoutMs:60000,onInfo:(line)=>{if(viewer===session&&index===total-1){const node=$('#game-analysis-progress');if(node)node.textContent=`Position ${index+1}/${total} · depth ${line.depth||0}`;}}});
+        const info=await engine.search(fen,{movetime:budgetMs,skill:20,multipv:3,timeoutMs:60000,onInfo:(line)=>{if(viewer===session&&index===total-1){const node=$('#game-analysis-progress');if(node)node.textContent=`Position ${index+1}/${total} · depth ${line.depth||0}`;}}});
+        info.fen=fen;session.positionCache.set(fen,info);
         positions.push({fen,info,whiteScore:whiteScore(info,fen)});
       }
-      const mistakes=[];
+      const mistakes=[],moveVerdicts=[];
       const moveCount=Math.min(session.moves.length,positions.length-1);
       for(let index=0;index<moveCount;index++){
         const move=session.moves[index];
         const before=positions[index].whiteScore,after=positions[index+1].whiteScore;
         const lossCp=Math.max(0,Math.round(move.color==='w'?before-after:after-before));
+        moveVerdicts.push({ply:index+1,lossCp});
         if(lossCp<70)continue;
         const bestMove=positions[index].info.bestMove;
         const bestMoveSan=sanLineFromUci(positions[index].fen,bestMove).split(' ')[0]||'—';
         const severity=lossCp>=300?'Blunder':lossCp>=150?'Mistake':'Inaccuracy';
         const coach=lossCp>=300?'Large evaluation swing; review this decision first.':lossCp>=150?'A meaningful opportunity was missed.':'A smaller improvement is available.';
-        mistakes.push({ply:index+1,move:move.san,color:move.color,lossCp,severity,bestMoveUci:bestMove,bestMoveSan,fen:positions[index].fen,pv:positions[index].info.pv,coach});
+        mistakes.push({ply:index+1,move:move.san,color:move.color,lossCp,severity,bestMoveUci:bestMove,bestMoveSan,fen:positions[index].fen,pv:positions[index].info.pv,candidates:positions[index].info.candidates||[],coach});
       }
       mistakes.sort((a,b)=>b.lossCp-a.lossCp);
       const limited=mistakes.slice(0,20);
-      session.positions=positions;session.report=limited;session.analysisBudget=budgetMs;session.progressText=`Complete · ${positions.length} positions reviewed.`;
+      session.positions=positions;session.moveVerdicts=moveVerdicts;session.report=limited;session.analysisBudget=budgetMs;session.positionAnalysis=session.positionCache.get(positionFenAt(session,session.ply))||null;session.progressText=`Complete · ${positions.length} positions reviewed.`;
       const state=getState();const stored=state.importedGames[session.index];
-      if(stored)stored.engineReview={budgetMs,analyzedAt:new Date().toISOString(),mistakes:limited};
+      if(stored)stored.engineReview={budgetMs,analyzedAt:new Date().toISOString(),mistakes:limited,moveVerdicts};
       api.persist();
     }catch(error){session.progressText=error?.message||'Full-game analysis failed.';session.report=null;}
     finally{if(viewer===session){session.analyzing=false;renderGameViewer();}}
@@ -755,6 +825,11 @@
         case 'viewer-last':if(viewer){viewer.ply=viewer.moves.length;viewer.positionAnalysis=viewer.positionCache.get(positionFenAt(viewer,viewer.ply))||null;renderGameViewer();}break;
         case 'analyze-position':analyzeViewerPosition();break;
         case 'analyze-game':analyzeViewerGame();break;
+        case 'show-mistake':{
+          const item=viewer?.report?.[Number(element.dataset.mistakeIndex)];
+          if(item){viewer.ply=Math.max(0,item.ply-1);viewer.positionAnalysis=viewer.positionCache.get(item.fen)||null;renderGameViewer();}
+          break;
+        }
         case 'build-drill':buildDrillFromMistake(element.dataset.mistakeIndex);break;
         case 'build-all-drills':buildAllDrills();break;
         case 'go-to-drills':$('#modal-root').innerHTML='';viewer=null;api.setPage('drills');break;
