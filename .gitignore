@@ -1,0 +1,14 @@
+# Local runtime state and temporary files
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+.DS_Store
+/uploads/
+*.pgn
+
+# GitHub Pages staging and build outputs
+/_site/
+/build/
+/dist/

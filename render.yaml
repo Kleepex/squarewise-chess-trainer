@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: squarewise-import-api
+    runtime: python
+    region: frankfurt
+    plan: free
+    buildCommand: python -m py_compile server.py import_api.py
+    startCommand: python import_api.py
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.8
+      - key: SQUAREWISE_ALLOWED_ORIGINS
+        sync: false
+      - key: SQUAREWISE_RATE_LIMIT
+        value: "20"
+      - key: SQUAREWISE_RATE_WINDOW_SECONDS
+        value: "600"

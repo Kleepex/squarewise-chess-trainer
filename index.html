@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#19251e">
+<title>Squarewise — your personal chess room</title>
+<style>
+:root{
+  --ink:#1c2921; --ink-2:#354238; --muted:#778176; --muted-2:#99a196;
+  --paper:#fffefa; --page:#f5f6f0; --line:#e7e9e1; --line-2:#d9ded4;
+  --forest:#203c2d; --forest-2:#2f5a3d; --green:#527b4d; --lime:#d5f06d;
+  --lime-2:#eaf6bd; --sand:#f2ebdc; --orange:#c77943; --red:#b8524a; --blue:#5f7c8b;
+  --shadow:0 16px 48px rgba(28,41,33,.08); --radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--page);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid rgba(92,130,68,.28);outline-offset:2px}
+.app-shell{min-height:100vh}
+.sidebar{position:fixed;z-index:30;inset:0 auto 0 0;width:248px;padding:25px 17px 18px;background:#19251e;color:#dce4d8;display:flex;flex-direction:column;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:11px;padding:0 9px 25px}
+.brand-mark{height:36px;width:36px;border-radius:11px;background:var(--lime);padding:7px;display:grid;grid-template-columns:repeat(2,1fr);gap:3px;transform:rotate(-3deg);box-shadow:0 6px 16px #0d171088}
+.brand-mark span{display:block;background:#22392a;border-radius:2px}.brand-mark span:nth-child(2),.brand-mark span:nth-child(3){background:#89a745}
+.brand-name{font-size:16px;letter-spacing:.055em;font-weight:850;color:#fbfff4;line-height:1.15}
+.brand-tag{font-size:8px;letter-spacing:.19em;color:#a7b5a9;font-weight:750;margin-top:4px}
+.side-label{font-size:9px;letter-spacing:.17em;color:#8c9b8e;font-weight:800;padding:0 11px;margin:15px 0 8px}
+.nav-list{display:grid;gap:4px}
+.nav-link{border:0;width:100%;color:#b8c4b9;background:transparent;display:flex;align-items:center;gap:12px;text-align:left;border-radius:10px;padding:10px 11px;font-size:12px;font-weight:650;transition:.18s ease}
+.nav-link:hover{background:#ffffff0e;color:#fff}
+.nav-link.active{background:#d5f06d;color:#1c3021;box-shadow:0 5px 14px #0711092b}
+.nav-icon{width:20px;height:20px;display:grid;place-items:center;font-size:16px;line-height:1;opacity:.9}
+.nav-link.active .nav-icon{color:#25432d}
+.nav-count{margin-left:auto;font-size:9px;border:1px solid #607064;border-radius:20px;padding:1px 6px;color:#c0ccc1}
+.sidebar-spacer{flex:1;min-height:20px}
+.unlock-card{border:1px solid #51624f;background:linear-gradient(145deg,#253b2b,#1b2a20);border-radius:14px;padding:13px 13px 12px;margin:13px 2px 15px;position:relative;overflow:hidden}
+.unlock-card:after{content:"";position:absolute;width:68px;height:68px;border:1px solid #a8cb6970;border-radius:50%;right:-22px;top:-24px;box-shadow:0 0 0 10px #a8cb6920,0 0 0 20px #a8cb6910}
+.unlock-chip{font-size:8px;letter-spacing:.14em;font-weight:850;color:#d5f06d;display:flex;align-items:center;gap:6px}
+.unlock-card p{font-size:10px;line-height:1.5;color:#bac9bc;margin:8px 0 0;max-width:160px}
+.sidebar-profile{display:flex;align-items:center;gap:10px;padding:12px 8px 2px;border-top:1px solid #ffffff17}
+.avatar{width:32px;height:32px;border-radius:50%;background:#d5f06d;color:#253d2c;display:grid;place-items:center;font-weight:850;font-size:12px;flex:none}
+.profile-meta{min-width:0}.profile-meta strong{display:block;font-size:11px;color:#f4f7ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.profile-meta span{font-size:9px;color:#9aaa9b}
+.profile-settings{margin-left:auto;background:none;border:0;color:#b5c2b5;font-size:17px;padding:5px}
+.app-main{margin-left:248px;min-width:0}
+.topbar{height:68px;position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:0 38px;background:rgba(245,246,240,.92);backdrop-filter:blur(14px);border-bottom:1px solid rgba(224,228,218,.8)}
+.crumb{font-size:9px;letter-spacing:.13em;color:#899287;font-weight:800;white-space:nowrap}.crumb span{padding:0 8px;color:#bec5bb}.crumb strong{color:#344437;letter-spacing:.04em}
+.topbar-left,.top-actions{display:flex;align-items:center;gap:13px;min-width:0}
+.searchbox{height:35px;width:240px;border:1px solid var(--line);border-radius:10px;background:#fffefa;display:flex;align-items:center;gap:8px;padding:0 10px;color:#8a9488}
+.searchbox span{font-size:20px;line-height:1;transform:rotate(-18deg)}.searchbox input{border:0;outline:0;background:transparent;width:100%;min-width:0;font-size:10px;color:var(--ink)}.searchbox input::placeholder{color:#a4aba1}
+.top-icon,.icon-button{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:#59665b;font-weight:700;display:grid;place-items:center}
+.top-icon:hover,.icon-button:hover{background:#eef2e7}.cloud-account-button{font-size:16px;color:#405f40}.cloud-account-button.connected{background:#edf5e5;border-color:#cedfbe;color:#426b3e}
+.profile-button{height:38px;border:0;border-radius:12px;background:transparent;display:flex;align-items:center;gap:9px;padding:3px 0 3px 5px;text-align:left;color:var(--ink)}.profile-button .avatar{width:30px;height:30px}.profile-button strong{font-size:10px;display:block}.profile-button small{font-size:9px;color:var(--muted);display:block}.profile-chevron{color:#8e998e;font-size:12px;margin-left:2px}
+.mobile-menu{display:none}
+.content-wrap{max-width:1460px;margin:0 auto;padding:28px 38px 60px}
+.page-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px}
+.eyebrow{font-size:9px;letter-spacing:.16em;font-weight:850;color:#748273;margin:0 0 8px;text-transform:uppercase}
+h1,h2,h3,p{margin-top:0}
+h1{font-family:Georgia,"Times New Roman",serif;font-size:32px;letter-spacing:-.045em;line-height:1.12;margin:0;color:#233229;font-weight:500}
+.page-subtitle{font-size:12px;color:var(--muted);margin:8px 0 0;max-width:660px}
+h2{font-size:17px;line-height:1.25;letter-spacing:-.025em;margin:0;color:#26362b}
+h3{font-size:13px;margin:0;color:#26362b}
+.small-muted{font-size:10px;color:var(--muted)}
+.primary-button,.secondary-button,.quiet-button,.outline-button{border:0;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 15px;font-size:10px;font-weight:800;transition:.18s ease;white-space:nowrap}
+.primary-button{background:var(--forest);color:#f7faef;box-shadow:0 5px 13px #16382020}.primary-button:hover{background:#345a3a;transform:translateY(-1px)}
+.secondary-button{background:var(--lime);color:#243624}.secondary-button:hover{background:#e1f58d;transform:translateY(-1px)}
+.outline-button{border:1px solid var(--line-2);background:#fffefa;color:#3d4a3f}.outline-button:hover{border-color:#aab59f;background:#f9faf5}
+.quiet-button{background:transparent;color:#52614f;padding:8px 10px}.quiet-button:hover{background:#eef1e8}
+.button-arrow{font-size:14px;line-height:1}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 3px 16px rgba(34,53,38,.025)}
+.demo-notice{display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid #e2e9d2;background:#f5f8eb;color:#667652;border-radius:10px;font-size:10px;margin-bottom:15px}.demo-notice .notice-mark{width:17px;height:17px;border:1px solid #a7b984;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:900;flex:none}
+.hero-banner{background:linear-gradient(112deg,#1e3928 0%,#284a32 52%,#355738 100%);color:#f3f6eb;border-radius:21px;min-height:222px;padding:27px 31px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:30px;margin-bottom:16px;box-shadow:0 12px 32px rgba(31,61,40,.12)}
+.hero-banner:before{content:"";position:absolute;inset:0;background-image:radial-gradient(#ffffff1b .7px,transparent .7px);background-size:17px 17px;mask-image:linear-gradient(90deg,transparent 25%,#000 100%);opacity:.35}
+.hero-banner:after{content:"";position:absolute;width:310px;height:310px;border-radius:50%;border:1px solid #d5f06d20;right:15%;top:-210px;box-shadow:0 0 0 35px #d5f06d08,0 0 0 75px #d5f06d07}
+.hero-copy{position:relative;z-index:1;max-width:620px}.hero-kicker{font-size:8px;font-weight:850;letter-spacing:.17em;color:#c2db9a;margin-bottom:10px;display:flex;align-items:center;gap:7px}.hero-kicker:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 9px #d5f06d}
+.hero-banner h2{font-family:Georgia,"Times New Roman",serif;color:#fbfff7;font-size:29px;line-height:1.12;letter-spacing:-.04em;font-weight:500;max-width:540px;margin:0 0 10px}.hero-banner p{font-size:11px;color:#cbd6c7;margin:0 0 17px;max-width:490px;line-height:1.65}.hero-actions{display:flex;align-items:center;gap:11px;flex-wrap:wrap}.hero-secondary{color:#e2ebde;font-size:10px;font-weight:700;text-decoration:none;padding:8px 4px}.hero-secondary:hover{color:var(--lime)}
+.hero-art{position:relative;z-index:1;flex:0 0 210px;height:160px;display:grid;place-items:center}.hero-board{width:126px;height:126px;padding:9px;border:1px solid #d3e7b275;border-radius:16px;background:#cbe39b10;box-shadow:0 20px 35px #101d153d;transform:rotate(7deg);display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);overflow:hidden}.hero-board span{display:grid;place-items:center;font-size:20px}.hero-board span:nth-child(2),.hero-board span:nth-child(4),.hero-board span:nth-child(5),.hero-board span:nth-child(7),.hero-board span:nth-child(10),.hero-board span:nth-child(12),.hero-board span:nth-child(13),.hero-board span:nth-child(15){background:#d5f06d;color:#213628}.hero-board span:nth-child(1),.hero-board span:nth-child(6),.hero-board span:nth-child(11),.hero-board span:nth-child(16){background:#25442e;color:#e7f1d6}.floating-score{position:absolute;right:3px;bottom:6px;border:1px solid #d5f06d60;background:#253e2dd9;border-radius:11px;padding:8px 11px;box-shadow:0 8px 20px #0a180d44}.floating-score span{display:block;font-size:7px;letter-spacing:.1em;color:#bfd1b8}.floating-score strong{font-size:14px;color:#f7fbea;display:block;margin-top:1px}.floating-score i{color:var(--lime);font-style:normal;font-size:9px;margin-left:5px}
+.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.metric-card{padding:15px 16px 14px;min-height:100px;position:relative;overflow:hidden}.metric-head{display:flex;align-items:center;justify-content:space-between;color:#7b867a;font-size:9px;font-weight:750}.metric-icon{width:25px;height:25px;border-radius:8px;background:#f0f3e9;color:#607c4e;display:grid;place-items:center;font-size:13px}.metric-value{font-family:Georgia,"Times New Roman",serif;font-size:26px;letter-spacing:-.04em;line-height:1.1;margin-top:8px;color:#233329}.metric-value small{font-family:Inter,system-ui,sans-serif;font-size:9px;color:#4f7b4a;letter-spacing:0;font-weight:800;margin-left:7px}.metric-foot{font-size:9px;color:#8b9589;margin-top:5px}.metric-spark{position:absolute;right:14px;bottom:12px;width:64px;height:24px;opacity:.8}
+.overview-grid{display:grid;grid-template-columns:minmax(0,1.17fr) minmax(300px,.83fr);gap:15px;margin-bottom:16px}.panel{padding:18px 19px}.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:15px}.panel-head h2{font-size:15px}.panel-head p{font-size:9px;color:#899286;margin:5px 0 0}.text-link{background:none;border:0;padding:2px 0;color:#4f704a;font-weight:800;font-size:9px;text-decoration:none}.text-link:hover{color:#263d2b;text-decoration:underline}
+.plan-list{display:grid;gap:7px}.plan-item{display:flex;align-items:center;gap:11px;padding:10px 10px;border:1px solid #edf0e9;border-radius:12px;min-height:57px}.plan-item:hover{background:#fbfcf8}.task-check{height:19px;width:19px;border-radius:6px;border:1px solid #d7dfd1;background:#fff;display:grid;place-items:center;color:transparent;font-size:11px;flex:none}.task-check.done{background:#5d7f4d;color:white;border-color:#5d7f4d}.task-copy{flex:1;min-width:0}.task-copy strong{font-size:10px;display:block;color:#344137}.task-copy span{font-size:9px;color:#8a9488;display:block;margin-top:2px}.task-time{font-size:8px;color:#858e81;background:#f4f5ef;border-radius:20px;padding:4px 7px;white-space:nowrap}.task-start{border:0;background:none;color:#54744b;font-size:9px;font-weight:850;padding:5px}
+.skill-list{display:grid;gap:15px}.skill-row{display:grid;grid-template-columns:92px 1fr 32px;align-items:center;gap:9px}.skill-name{font-size:9px;font-weight:700;color:#5e6a5e}.skill-track{height:6px;border-radius:20px;background:#eff1eb;overflow:hidden}.skill-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,#809d58,#c5df70)}.skill-fill.low{background:linear-gradient(90deg,#d29662,#e9bb6d)}.skill-pct{font-size:9px;color:#68776a;font-weight:800;text-align:right}.skill-footer{font-size:9px;color:#849084;border-top:1px solid #eff1eb;margin-top:15px;padding-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px}.sample-tag{font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#8a956c;background:#f4f6e8;padding:4px 7px;border-radius:20px;white-space:nowrap}
+.shortcut-heading{display:flex;align-items:center;justify-content:space-between;margin:20px 0 11px}.shortcut-heading h2{font-size:15px}.shortcut-heading p{font-size:9px;color:#858f82;margin:4px 0 0}.shortcut-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:17px}.shortcut-card{border:1px solid var(--line);background:#fffefa;border-radius:14px;text-align:left;padding:14px 14px 13px;transition:.18s ease;min-height:123px;position:relative;overflow:hidden}.shortcut-card:hover{border-color:#c6d4b7;transform:translateY(-2px);box-shadow:0 8px 22px #293f2810}.shortcut-icon{width:30px;height:30px;border-radius:10px;background:#eff4e4;color:#527548;display:grid;place-items:center;font-size:16px;margin-bottom:11px}.shortcut-card strong{display:block;font-size:10px;color:#2c3b30}.shortcut-card span{display:block;color:#808b7e;font-size:9px;line-height:1.45;margin-top:4px;max-width:210px}.shortcut-arrow{position:absolute;right:13px;top:14px;color:#96a38f;font-size:13px}
+.recent-grid{display:grid;grid-template-columns:minmax(0,1.17fr) minmax(300px,.83fr);gap:15px}.game-list{display:grid}.game-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #eff1eb}.game-opponent strong{display:block;font-size:10px;color:#364238}.game-opponent span{font-size:9px;color:#929b90}.game-tag{font-size:8px;color:#798578;background:#f4f5ef;padding:4px 8px;border-radius:20px;white-space:nowrap}.result-pill{font-size:8px;font-weight:850;border-radius:20px;padding:4px 8px;min-width:43px;text-align:center}.result-win{background:#e9f3de;color:#507343}.result-loss{background:#fae7e3;color:#a85348}.result-draw{background:#f2ecdc;color:#997344}.coach-note{background:#fbf8ed;border:1px solid #f0e9d7;border-radius:14px;padding:15px}.coach-note .note-icon{width:27px;height:27px;border-radius:9px;background:#efe4c9;display:grid;place-items:center;color:#99774a;margin-bottom:10px}.coach-note strong{font-size:10px;display:block;margin-bottom:5px}.coach-note p{font-family:Georgia,"Times New Roman",serif;font-size:14px;line-height:1.45;color:#465041;margin:0}.coach-note small{font-size:8px;color:#8e8c7d;display:block;margin-top:10px}
+/* training catalog */
+.training-toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:20px 0 14px;flex-wrap:wrap}.filter-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.filter-chip{border:1px solid var(--line);border-radius:22px;background:#fffefa;padding:7px 11px;color:#738071;font-size:9px;font-weight:750}.filter-chip:hover{border-color:#bdcbb0}.filter-chip.active{background:#203c2d;border-color:#203c2d;color:#eff6e8}.catalog-search{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:10px;background:#fffefa;padding:0 10px;height:34px;min-width:210px;color:#8c968b}.catalog-search input{border:0;background:transparent;outline:0;min-width:0;font-size:10px;width:100%}
+.module-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.module-card{background:#fffefa;border:1px solid var(--line);border-radius:15px;padding:15px 15px 14px;min-height:155px;display:flex;flex-direction:column;text-align:left;transition:.2s ease;position:relative;overflow:hidden}.module-card:hover{transform:translateY(-2px);border-color:#bfd0b4;box-shadow:0 10px 24px rgba(38,61,39,.07)}.module-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px}.module-icon{width:34px;height:34px;border-radius:11px;background:#edf2e6;color:#56774d;display:grid;place-items:center;font-size:17px;flex:none}.module-badge{font-size:7px;letter-spacing:.09em;text-transform:uppercase;font-weight:850;color:#758665;background:#f4f6eb;border-radius:20px;padding:5px 7px}.module-card h3{font-size:11px;margin:0 0 5px}.module-card p{font-size:9px;line-height:1.5;color:#838e81;margin:0 0 14px;max-width:300px}.module-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;color:#8a9387;font-size:8px}.module-foot strong{color:#4d6d45;font-size:9px}.module-card[data-category="Technique"] .module-icon{background:#f4eee3;color:#a27643}.module-card[data-category="Habits"] .module-icon{background:#eaf1f2;color:#527687}.module-card[data-category="Games"] .module-icon{background:#f3eaf0;color:#91627b}
+/* game review/openings/library/progress */
+.info-strip{display:flex;align-items:flex-start;gap:11px;padding:13px 14px;border-radius:12px;background:#f3f6ed;border:1px solid #e3e9d8;color:#56644f;font-size:10px;line-height:1.55;margin:0 0 16px}.info-strip strong{display:block;color:#344632;margin-bottom:2px}.info-icon{width:22px;height:22px;border-radius:7px;background:#e5ecd9;display:grid;place-items:center;flex:none;font-size:12px}
+.review-top-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.52fr);gap:14px;margin-bottom:15px}.import-card{padding:19px;display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(110deg,#fffefa,#f9faef)}.import-card h2{font-size:16px}.import-card p{font-size:10px;color:#858f82;margin:6px 0 0;max-width:460px}.import-actions{display:flex;gap:8px;flex-wrap:wrap}.mini-stats{padding:17px}.mini-stats h3{font-size:10px;color:#697568;margin-bottom:11px}.mini-stat-row{display:flex;justify-content:space-between;font-size:9px;color:#879185;padding:5px 0;border-top:1px solid #f0f1eb}.mini-stat-row strong{color:#344237}
+.game-table{width:100%;border-collapse:collapse;font-size:10px}.game-table th{text-align:left;font-size:8px;color:#8a9488;letter-spacing:.1em;text-transform:uppercase;font-weight:800;padding:10px 9px;border-bottom:1px solid #ebeee7}.game-table td{padding:12px 9px;border-bottom:1px solid #f0f1eb;color:#59665a}.game-table tr:last-child td{border-bottom:0}.game-table td strong{display:block;color:#334035;font-size:10px}.table-wrap{overflow-x:auto}.empty-state{padding:32px 20px;text-align:center;color:#7e897c}.empty-state .empty-icon{width:42px;height:42px;border-radius:14px;background:#eff3e7;color:#6e874d;display:grid;place-items:center;font-size:20px;margin:0 auto 10px}.empty-state strong{display:block;color:#37463b;font-size:12px;margin-bottom:4px}.empty-state p{font-size:10px;margin:0 auto 13px;max-width:400px}
+.opening-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:17px 0}.opening-card{padding:17px;min-height:200px}.opening-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.opening-side{font-size:8px;letter-spacing:.09em;color:#7c8979;text-transform:uppercase;font-weight:850}.opening-card h3{font-family:Georgia,"Times New Roman",serif;font-size:17px;letter-spacing:-.02em;margin:6px 0 10px}.opening-line{border-radius:10px;background:#f5f6f0;padding:10px 11px;font-family:Georgia,"Times New Roman",serif;font-size:11px;color:#41503f;line-height:1.5;min-height:55px}.opening-note{font-size:9px;color:#818c7f;line-height:1.5;margin:10px 0 14px}.opening-actions{display:flex;gap:8px;margin-top:auto}.add-card{padding:17px;border:1px dashed #bdc8b6;border-radius:15px;background:#f9faf5;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;color:#73816c;min-height:200px;text-align:left}.add-card:hover{background:#f1f5e9;border-color:#879f78}.add-card .plus{width:30px;height:30px;border-radius:10px;background:#e8efdc;color:#56764a;display:grid;place-items:center;font-size:20px;margin-bottom:10px}.add-card strong{font-size:11px;color:#445345}.add-card span{font-size:9px;margin-top:5px}
+.library-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}.study-card{padding:16px;min-height:170px;display:flex;flex-direction:column}.study-card .study-type{font-size:8px;color:#708263;background:#f1f4e7;align-self:flex-start;border-radius:20px;padding:4px 7px;letter-spacing:.06em;text-transform:uppercase;font-weight:800}.study-card h3{font-family:Georgia,"Times New Roman",serif;font-size:16px;margin:10px 0 5px}.study-card p{font-size:9px;color:#818c7f;line-height:1.5;margin:0 0 12px}.study-card .study-footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;color:#929b8e;font-size:8px}.study-actions{display:flex;gap:7px;margin-top:10px}.study-actions button{font-size:8px;padding:6px 8px}
+.progress-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:16px}.chart-card{padding:19px}.chart-wrap{height:205px;margin-top:18px}.chart-wrap svg{width:100%;height:100%;overflow:visible}.chart-labels{display:flex;justify-content:space-between;font-size:8px;color:#99a095;margin-top:4px}.progress-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:13px}.summary-tile{background:#f5f6f0;border-radius:11px;padding:10px}.summary-tile strong{display:block;font-family:Georgia,"Times New Roman",serif;font-size:17px;color:#2b3b2e}.summary-tile span{display:block;font-size:8px;color:#879184;margin-top:3px}.focus-bars{display:grid;gap:13px}.focus-bar-row .skill-row{grid-template-columns:105px 1fr 32px}.weekly-bars{height:140px;display:flex;align-items:flex-end;justify-content:space-around;gap:13px;padding:13px 10px 0;border-bottom:1px solid #edf0e9}.weekly-col{display:flex;align-items:center;flex-direction:column;justify-content:flex-end;height:100%;gap:6px;flex:1}.weekly-bar{width:100%;max-width:30px;border-radius:6px 6px 2px 2px;background:#cadcaa;position:relative;min-height:6px}.weekly-bar.current{background:#507a49}.weekly-col span{font-size:8px;color:#8a9589}.progress-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+/* modal and activity */
+#modal-root{position:relative;z-index:80}.modal-backdrop{position:fixed;inset:0;background:rgba(19,29,22,.48);backdrop-filter:blur(5px);display:grid;place-items:center;padding:20px;animation:fade-in .16s ease}.modal-panel{width:min(540px,100%);max-height:min(88vh,900px);overflow:auto;background:#fffefa;border:1px solid #e2e6dc;border-radius:20px;box-shadow:0 28px 90px rgba(11,22,13,.28);padding:22px;animation:rise-in .18s ease}.modal-panel.modal-wide{width:min(760px,100%)}.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}.modal-head h2{font-family:Georgia,"Times New Roman",serif;font-size:22px;font-weight:500;letter-spacing:-.035em}.modal-head p{font-size:10px;color:#859083;margin:5px 0 0}.modal-close{flex:none}.form-field{display:grid;gap:6px;margin:12px 0}.form-field label{font-size:9px;font-weight:800;color:#687667;letter-spacing:.035em}.form-field input,.form-field textarea,.form-field select{width:100%;border:1px solid #dfe4da;border-radius:9px;background:#fff;padding:10px 11px;color:#344137;font-size:11px}.form-field textarea{resize:vertical;min-height:180px;line-height:1.55;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px}.form-field input::placeholder,.form-field textarea::placeholder{color:#a7afa3}.form-help{font-size:9px;color:#8b9589;line-height:1.5;margin-top:-3px}.modal-actions{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:17px}.error-text{font-size:9px;color:#ac5148;min-height:15px;margin-top:7px}.drop-zone{border:1px dashed #c8d2c1;border-radius:11px;background:#f8faf3;padding:12px;text-align:center;color:#7d8978;font-size:9px;margin:10px 0}.drop-zone input{max-width:100%;font-size:9px;margin-top:7px}
+.activity-shell{display:grid;grid-template-columns:minmax(0,1fr) 225px;gap:17px}.activity-main{min-width:0}.activity-aside{padding:15px;border:1px solid #ebeee6;border-radius:13px;background:#f8f9f4;align-self:start}.activity-aside .eyebrow{font-size:8px}.activity-aside h3{font-size:11px;margin-bottom:7px}.activity-aside p{font-size:9px;color:#788477;line-height:1.55;margin:0}.activity-title{font-family:Georgia,"Times New Roman",serif;font-size:24px;letter-spacing:-.04em;font-weight:500;line-height:1.12;margin:0 0 6px}.activity-instruction{font-size:10px;color:#7c877b;line-height:1.55;margin:0 0 15px}.progress-track{height:4px;background:#edf0e8;border-radius:10px;overflow:hidden;margin:12px 0 16px}.progress-track span{height:100%;background:#99b85b;display:block;width:25%;border-radius:10px}
+.board-area{display:flex;justify-content:center;margin:12px 0 13px}.chessboard{container-type:inline-size;width:min(100%,360px);aspect-ratio:1/1;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);border:5px solid #eee9da;border-radius:8px;overflow:hidden;box-shadow:0 9px 20px #18271912}.square{position:relative;border:0;border-radius:0;display:grid;place-items:center;padding:0;font-family:"Segoe UI Symbol","Noto Sans Symbols 2",serif;font-size:clamp(20px,8vw,48px);font-size:clamp(20px,10cqw,62px);line-height:1;transition:background .12s}.square.light{background:#f0e9d8}.square.dark{background:#7d9a6f}.square.selected{box-shadow:inset 0 0 0 4px #d2ee62!important;background:#b5cd75}.square.target::after{content:"";position:absolute;width:20%;height:20%;border-radius:50%;background:#203c2d80}.square .coord{position:absolute;font-family:Inter,system-ui,sans-serif;font-size:7px;left:3px;bottom:2px;color:#53674b;opacity:.8}.square .piece{display:block;transform:scale(1.08);transform-origin:center}.piece.white-piece{color:#fbfaf3;text-shadow:0 1px 1px #40513c,1px 2px 1px #41513c,-1px 0 1px #41513c}.piece.black-piece{color:#27372b;text-shadow:0 1px 0 #d8ddc8}.board-help{max-width:360px;margin:0 auto 10px;display:flex;justify-content:space-between;gap:10px;color:#8b9488;font-size:8px}.choice-list{display:grid;gap:8px;margin:12px 0}.choice-button{border:1px solid #e5e9e1;background:#fff;border-radius:11px;padding:11px 12px;text-align:left;color:#3c493e;font-size:10px;display:flex;align-items:flex-start;gap:9px;line-height:1.45;transition:.15s}.choice-button:hover{border-color:#b6c7a8;background:#fbfcf8}.choice-button .choice-letter{width:19px;height:19px;border-radius:6px;background:#f0f3ec;display:grid;place-items:center;font-size:8px;font-weight:850;color:#73836d;flex:none}.choice-button.correct{border-color:#8bb67c;background:#eff7e9}.choice-button.wrong{border-color:#e0a399;background:#fff3f0}.answer-input-row{display:flex;gap:8px;margin:12px 0}.answer-input-row input{flex:1;min-width:0;border:1px solid #dfe4da;border-radius:9px;padding:10px;font-size:11px}.feedback-box{padding:10px 12px;border-radius:10px;font-size:9px;line-height:1.5;margin:10px 0;background:#f5f6f0;color:#667361}.feedback-box.success{background:#eef6e7;border:1px solid #d8e8c9;color:#496d40}.feedback-box.retry{background:#fbf4e9;border:1px solid #efe2c9;color:#8a704c}.activity-complete{text-align:center;padding:18px 12px}.activity-complete .complete-mark{height:52px;width:52px;border-radius:50%;background:#eaf3dc;color:#547847;display:grid;place-items:center;font-size:24px;margin:0 auto 12px}.activity-complete h3{font-family:Georgia,"Times New Roman",serif;font-weight:500;font-size:21px}.activity-complete p{font-size:10px;color:#7b867a;max-width:390px;margin:6px auto 16px}.activity-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:15px;padding-top:13px;border-top:1px solid #ecefe7}.activity-footer span{font-size:8px;color:#8a9489}.toast{position:fixed;z-index:100;bottom:24px;left:50%;transform:translate(-50%,14px);opacity:0;pointer-events:none;background:#1d3024;color:#eff6e9;border-radius:11px;padding:10px 15px;font-size:10px;box-shadow:0 12px 32px #11201540;transition:.24s}.toast.show{opacity:1;transform:translate(-50%,0)}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}@keyframes rise-in{from{opacity:.7;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+.mobile-dock{display:none}
+@media (max-width:1200px){.content-wrap{padding-left:28px;padding-right:28px}.topbar{padding:0 28px}.module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.shortcut-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-art{flex-basis:165px}}
+@media (max-width:930px){.sidebar{width:220px}.app-main{margin-left:220px}.topbar{padding:0 20px}.content-wrap{padding:23px 20px 45px}.searchbox{width:190px}.overview-grid,.recent-grid{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.progress-grid{grid-template-columns:1fr}.opening-grid,.library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-art{flex-basis:140px}.hero-board{width:112px;height:112px}}
+@media (max-width:680px){
+  .sidebar{transform:translateX(-102%);transition:transform .24s ease;width:268px;box-shadow:20px 0 60px #14231938}.sidebar.open{transform:translateX(0)}.app-main{margin-left:0}.topbar{height:58px;padding:0 14px;gap:8px}.topbar-left{gap:9px}.mobile-menu{display:grid}.crumb{font-size:8px;letter-spacing:.08em}.crumb span{padding:0 4px}.searchbox{display:none}.top-actions{gap:6px}.top-icon{width:31px;height:31px}.profile-button{padding:0}.profile-button .profile-label,.profile-chevron{display:none}.profile-button .avatar{width:30px;height:30px}.content-wrap{padding:20px 14px 94px}.page-heading{align-items:flex-start;flex-direction:column;margin-bottom:16px;gap:13px}.page-heading h1{font-size:28px}.page-heading .primary-button{align-self:flex-start}.hero-banner{padding:22px 19px;min-height:0;display:block;margin-bottom:12px}.hero-banner h2{font-size:25px}.hero-banner p{max-width:100%;font-size:10px}.hero-art{position:absolute;right:-20px;bottom:-25px;opacity:.25;transform:scale(.8)}.hero-copy{max-width:100%}.hero-secondary{display:none}.metric-grid{gap:8px}.metric-card{min-height:92px;padding:12px}.metric-value{font-size:22px}.metric-value small{font-size:8px}.metric-foot{font-size:8px}.overview-grid,.recent-grid{gap:10px}.panel{padding:15px}.shortcut-grid{gap:8px}.shortcut-card{min-height:117px;padding:12px}.shortcut-card span{font-size:8px}.module-grid{grid-template-columns:1fr;gap:9px}.module-card{min-height:140px}.training-toolbar{align-items:flex-start}.catalog-search{width:100%}.filter-row{gap:5px}.filter-chip{padding:6px 9px}.review-top-grid{grid-template-columns:1fr}.import-card{display:block}.import-actions{margin-top:14px}.opening-grid,.library-grid{grid-template-columns:1fr}.opening-card{min-height:0}.add-card{min-height:120px}.progress-summary{grid-template-columns:repeat(3,1fr)}.activity-shell{grid-template-columns:1fr}.activity-aside{order:2}.modal-backdrop{padding:10px;align-items:end}.modal-panel{max-height:91vh;border-radius:19px 19px 12px 12px;padding:18px}.activity-modal .modal-panel{width:100%}.activity-title{font-size:21px}.game-table{min-width:560px}.mobile-dock{position:fixed;z-index:25;bottom:0;left:0;right:0;height:64px;background:rgba(255,254,250,.96);backdrop-filter:blur(14px);border-top:1px solid #e6e9e0;display:grid;grid-template-columns:repeat(6,1fr);padding:5px 4px calc(5px + env(safe-area-inset-bottom));box-shadow:0 -8px 25px #2436260c}.dock-link{border:0;background:none;color:#879184;display:grid;align-content:center;justify-items:center;gap:1px;font-size:8px;font-weight:700}.dock-link span:first-child{font-size:16px;line-height:1.2}.dock-link.active{color:#3e673d}.dock-link.active span:first-child{background:#eef5dd;border-radius:9px;padding:1px 10px}.toast{bottom:77px}}
+@media (max-width:400px){.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-banner h2{font-size:23px}.shortcut-grid{grid-template-columns:1fr 1fr}.skill-row{grid-template-columns:82px 1fr 28px;gap:6px}.skill-name{font-size:8px}}
+</style>
+<style>
+.engine-status{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border-radius:20px;background:#f3f5ec;color:#64745c;font-size:8px;font-weight:800;letter-spacing:.04em}.engine-dot{height:6px;width:6px;border-radius:50%;background:#8ca56f;box-shadow:0 0 0 3px #e4ecd8}.engine-status.loading .engine-dot{background:#d1944e;box-shadow:0 0 0 3px #f4e9d8;animation:pulse 1s infinite}.engine-status.error .engine-dot{background:#b8524a;box-shadow:0 0 0 3px #f3dedb}.play-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(270px,.9fr);gap:14px;align-items:start}.play-card{padding:18px}.play-toolbar{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;margin-bottom:14px}.play-selects{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.play-selects select,.depth-select{border:1px solid var(--line);border-radius:8px;background:#fffefa;color:#445244;padding:7px 9px;font-size:9px}.play-board .chessboard{width:min(100%,520px)}.play-board .board-area{margin:0}.play-board-shell{max-width:540px;margin:0 auto}.play-status{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#f5f6f0;border-radius:10px;margin-top:12px;font-size:9px;color:#788477}.play-status strong{color:#3e5e3d}.square.legal-square::after{content:"";position:absolute;width:22%;height:22%;border-radius:50%;background:#263f3077}.square.legal-capture::after{content:"";position:absolute;inset:5%;border:4px solid #3249329c;border-radius:50%}.square.last-move{background:#c6d876!important}.square.play-selected{box-shadow:inset 0 0 0 4px #d5f06d!important}.play-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.play-actions .primary-button,.play-actions .outline-button,.play-actions .quiet-button{padding:8px 10px}.move-panel{padding:18px}.move-panel h2{font-size:15px}.move-list{max-height:330px;overflow:auto;margin-top:12px;border-top:1px solid #edf0e9}.move-pair{display:grid;grid-template-columns:30px 1fr 1fr;align-items:center;gap:5px;padding:6px 0;border-bottom:1px solid #f1f2ed}.move-number{font-size:8px;color:#929b8f}.move-token{border:0;background:none;text-align:left;border-radius:6px;color:#576457;padding:4px 6px;font-family:Georgia,"Times New Roman",serif;font-size:11px}.move-token:hover,.move-token.current{background:#edf3df;color:#365337}.engine-tip{padding:12px;border:1px solid #e5eadb;border-radius:11px;background:#f8faf3;margin-top:12px;color:#6f7b6c;font-size:9px;line-height:1.55}.engine-tip strong{color:#455a43;display:block;margin-bottom:4px}.play-loading{padding:48px 15px;text-align:center;color:#7e8a7b;font-size:11px}.viewer-layout{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(300px,1.1fr);gap:17px;align-items:start}.viewer-board-column{min-width:0}.viewer-board-column .chessboard{width:min(100%,420px)}.viewer-board-column .board-area{margin:0}.viewer-controls{display:flex;justify-content:center;align-items:center;gap:7px;margin:12px 0}.viewer-controls button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 10px;color:#52614f;font-size:10px}.viewer-controls button:hover{background:#f2f5ea}.viewer-controls span{font-size:9px;color:#7c877b;min-width:75px;text-align:center}.viewer-engine-card{border:1px solid #e7eae2;background:#fbfcf8;border-radius:12px;padding:12px;margin:12px 0}.viewer-engine-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.viewer-engine-head strong{font-size:10px;color:#42513f}.engine-score{font-family:Georgia,"Times New Roman",serif;font-size:20px;color:#305234;margin-top:7px}.engine-pv{font-family:Georgia,"Times New Roman",serif;font-size:10px;color:#637060;line-height:1.6;margin-top:5px;word-break:break-word}.analysis-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}.analysis-actions button{padding:8px 10px}.analysis-progress{font-size:8px;color:#8a9587;margin-top:8px;min-height:13px}.viewer-moves{max-height:300px;overflow:auto;padding:10px;border:1px solid #ecefe8;border-radius:10px;background:#fbfcf8}.viewer-move-row{display:grid;grid-template-columns:30px 1fr 1fr;gap:4px;align-items:center;padding:3px 0}.viewer-move-row span{font-size:8px;color:#9ba397}.viewer-move-row button{border:0;background:none;text-align:left;border-radius:5px;padding:4px 6px;font-family:Georgia,"Times New Roman",serif;color:#59665a;font-size:10px}.viewer-move-row button:hover,.viewer-move-row button.current{background:#edf3df;color:#2f5936}.mistake-list{display:grid;gap:7px;margin-top:10px}.mistake-item{display:grid;grid-template-columns:68px 1fr auto;align-items:center;gap:8px;border:1px solid #ecefe8;border-radius:9px;background:#fff;padding:8px}.mistake-badge{font-size:7px;letter-spacing:.08em;text-transform:uppercase;font-weight:850;color:#a15d48;background:#faede7;border-radius:20px;padding:5px 7px;text-align:center}.mistake-badge.inaccuracy{color:#9a7948;background:#f7f1e2}.mistake-copy strong{display:block;color:#3f4c40;font-size:9px}.mistake-copy span{display:block;color:#8b9588;font-size:8px;margin-top:2px}.mistake-item button{font-size:8px;padding:6px 8px}.personal-drill-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}.personal-drill-card{padding:15px}.personal-drill-card .drill-meta{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:#798976;font-weight:850}.personal-drill-card h3{font-family:Georgia,"Times New Roman",serif;font-size:16px;margin:8px 0 5px}.personal-drill-card p{font-size:9px;color:#7f8a7e;line-height:1.5;margin:0 0 12px}.personal-drill-card .drill-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}.drill-board .chessboard{width:min(100%,420px)}.import-tabs{display:flex;gap:5px;padding:4px;background:#f1f3ec;border-radius:10px;margin:5px 0 14px}.import-tab{flex:1;border:0;border-radius:7px;background:transparent;padding:8px 7px;color:#7b8678;font-size:9px;font-weight:800}.import-tab.active{background:#fffefa;color:#38543a;box-shadow:0 2px 7px #1c2c1a12}.import-panel{display:none}.import-panel.active{display:block}.api-status{font-size:9px;line-height:1.5;min-height:17px;color:#7e8b78;margin-top:7px}.api-status.error{color:#a95449}.api-status.success{color:#4e7643}.token-note{background:#f7f5ee;border-radius:9px;padding:9px 10px;color:#847b68;font-size:8px;line-height:1.5}.source-badge{font-size:8px;color:#6e7c69;background:#eef2e8;border-radius:20px;padding:4px 7px;white-space:nowrap}
+@keyframes pulse{50%{opacity:.45;transform:scale(.8)}}
+@media(max-width:900px){.play-layout,.viewer-layout{grid-template-columns:1fr}.play-board .chessboard{width:min(100%,480px)}.viewer-board-column .chessboard{width:min(100%,440px)}}
+@media(max-width:680px){.play-card,.move-panel{padding:14px}.play-toolbar{align-items:flex-start}.play-layout{gap:10px}.viewer-layout{gap:11px}.viewer-moves{max-height:220px}.personal-drill-grid{grid-template-columns:1fr}.mistake-item{grid-template-columns:60px 1fr}.mistake-item button{grid-column:2;justify-self:start}.viewer-board-column .chessboard,.drill-board .chessboard{width:min(100%,360px)}.play-board .chessboard{width:min(100%,420px)}}
+</style>
+<style>
+.cloud-modal{width:min(100%,540px)}.cloud-modal .cloud-privacy-note{border:1px solid #e5eadb;background:#f7f9f3;border-radius:11px;padding:11px 13px;margin:14px 0;color:#667363;font-size:10px;line-height:1.55}.cloud-privacy-note strong{display:block;color:#40573f;margin-bottom:3px}.cloud-mode-tabs{display:flex;gap:6px;background:#f1f3ec;border-radius:10px;padding:4px;margin:12px 0 15px}.cloud-mode-tabs button{flex:1;border:0;border-radius:7px;background:transparent;color:#72806f;padding:8px 10px;font-size:10px;font-weight:800}.cloud-mode-tabs button.active{background:#fffefa;color:#38543a;box-shadow:0 2px 7px #1c2c1a12}.cloud-help{font-size:9px;line-height:1.55;color:#7a8577;margin:8px 0 12px}.cloud-help code{font-size:8px;background:#f0f2ec;border-radius:4px;padding:2px 4px}.cloud-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:14px}.cloud-account-card{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #e5eadb;background:#f7f9f3;border-radius:12px}.cloud-account-icon{width:40px;height:40px;border-radius:12px;background:#e6efd9;color:#4d7545;display:grid;place-items:center;font-size:21px}.cloud-account-card strong,.cloud-account-card span{display:block}.cloud-account-card strong{font-size:12px;color:#3a4a3b;overflow-wrap:anywhere}.cloud-account-card span{font-size:9px;color:#71806f;margin-top:3px}.cloud-message{padding:9px 11px;margin:10px 0;border-radius:9px;background:#f1f3ec;color:#667363;font-size:9px;line-height:1.5}.cloud-message.error{background:#fbefec;color:#994f46}.cloud-message.success{background:#eef6e8;color:#4c7042}.cloud-link{display:block;margin:12px auto 0;border:0;background:none;color:#59754e;text-decoration:underline;text-underline-offset:2px;font-size:9px}.cloud-conflict-actions{justify-content:space-between;margin-top:18px}.cloud-conflict-actions>*{flex:1;min-width:190px}.cloud-modal .form-field input{font-size:13px;padding:12px}.cloud-modal .form-field label{font-size:10px}.cloud-modal .modal-head p{max-width:430px}
+@media(max-width:680px){.cloud-modal .cloud-conflict-actions{flex-direction:column-reverse;align-items:stretch}.cloud-conflict-actions>*{width:100%;min-width:0}.cloud-modal .cloud-actions button{flex:1}.cloud-modal .cloud-account-card{align-items:flex-start}.cloud-modal .modal-head p{font-size:10px}}
+</style>
+<style>
+.guided-session-launch{display:flex;align-items:center;gap:15px;padding:17px;margin:15px 0 18px;border:1px solid #dfe8d4;background:linear-gradient(115deg,#f5f8ef,#fffefa)}.guided-session-mark{width:45px;height:45px;flex:none;border-radius:13px;background:#e5eed6;color:#4d7243;display:grid;place-items:center;font-size:25px}.guided-session-copy{flex:1;min-width:0}.guided-session-copy h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;font-size:18px;color:#334532;margin:3px 0 4px}.guided-session-copy p{font-size:10px;line-height:1.55;color:#778374;margin:0}.guided-session-launch .primary-button{flex:none}.session-modal{width:min(100%,690px)}.session-modal .modal-head p{max-width:520px}.session-builder-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.session-builder-grid .form-field{margin-bottom:9px}.session-plan-preview{display:flex;align-items:center;gap:11px;background:#f4f7ef;border:1px solid #e3e9da;border-radius:12px;padding:12px;margin:4px 0 10px}.session-plan-icon{width:35px;height:35px;border-radius:10px;background:#e4edd7;color:#507744;display:grid;place-items:center;font-size:19px;flex:none}.session-plan-preview strong,.session-plan-preview span{display:block}.session-plan-preview strong{font-size:10px;color:#465845}.session-plan-preview span{font-size:9px;color:#7f897c;margin-top:3px;line-height:1.4}.session-toggle{display:flex;align-items:center;gap:8px;color:#62715f;font-size:9px;margin:10px 0}.session-toggle input{accent-color:#567d49}.session-builder-note{padding:10px 12px;background:#f8f5ed;border-radius:9px;color:#827760;font-size:9px;line-height:1.5;margin:10px 0}.session-builder-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0 10px}.session-builder-steps div{display:flex;align-items:center;gap:7px;padding:9px;border:1px solid #edf0e9;border-radius:9px;color:#667361;font-size:8px}.session-builder-steps b{color:#789468;font-size:9px}.session-progress{height:6px;border-radius:5px;background:#edf0e9;overflow:hidden;margin:12px 0 8px}.session-progress span{height:100%;display:block;background:linear-gradient(90deg,#829e6a,#d5ef70);transition:width .25s}.session-meta-row{display:flex;justify-content:space-between;gap:10px;color:#899386;font-size:8px;text-transform:uppercase;letter-spacing:.05em;margin:8px 0 12px}.session-board-wrap{display:flex;flex-direction:column;align-items:stretch}.session-board-wrap .board-area{width:100%}.session-board-wrap .chessboard{width:min(100%,440px);margin:0 auto}.session-choice-list{display:grid;gap:9px;margin:12px 0}.session-choice{width:100%;border:1px solid #e5e9e1;background:#fff;border-radius:11px;padding:12px;text-align:left;color:#3c493e;font-size:10px;display:flex;align-items:flex-start;gap:9px;line-height:1.5}.session-choice:not(:disabled):hover{border-color:#b6c7a8;background:#fbfcf8}.session-choice:disabled{opacity:1;cursor:default}.session-choice.correct{border-color:#8bb67c;background:#eff7e9}.session-choice.correct .session-choice-letter{background:#e0edd4;color:#4a7142}.session-choice-letter{width:20px;height:20px;border-radius:6px;background:#eef2e8;display:grid;place-items:center;font-size:8px;font-weight:850;color:#718369;flex:none}.session-feedback{padding:10px 12px;border-radius:10px;font-size:9px;line-height:1.5;margin:10px 0;background:#f5f6f0;color:#667361}.session-feedback.success{background:#eef6e7;border:1px solid #d8e8c9;color:#496d40}.session-feedback.retry{background:#fbf4e9;border:1px solid #efe2c9;color:#8a704c}.session-round-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:12px;margin-top:12px;border-top:1px solid #ecefe7;color:#7b8679;font-size:9px}.session-result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}.session-result-grid div{padding:12px 8px;text-align:center;background:#f6f8f1;border:1px solid #e8ede1;border-radius:10px}.session-result-grid strong,.session-result-grid span{display:block}.session-result-grid strong{font-family:Georgia,"Times New Roman",serif;font-size:20px;color:#3e5d3f}.session-result-grid span{font-size:8px;color:#7f8b7b;margin-top:4px}.session-review-card{padding:13px 14px;border-radius:11px;background:#f6f4ec;margin:14px 0}.session-review-card .eyebrow{color:#879074}.session-review-card strong{display:block;color:#495644;font-size:10px;margin:5px 0}.session-review-card p{font-size:9px;line-height:1.5;color:#818777;margin:0}
+@media(max-width:680px){.guided-session-launch{align-items:flex-start;flex-wrap:wrap}.guided-session-copy{min-width:calc(100% - 60px)}.guided-session-launch .primary-button{margin-left:58px}.session-builder-grid{grid-template-columns:1fr;gap:2px}.session-builder-steps{grid-template-columns:1fr}.session-builder-steps div{font-size:9px}.session-round-footer{align-items:flex-start;flex-direction:column}.session-round-footer button{align-self:flex-start}.session-result-grid{grid-template-columns:repeat(2,1fr)}.session-meta-row{font-size:7px}}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <div><div class="brand-name">SQUAREWISE</div><div class="brand-tag">YOUR PERSONAL CHESS ROOM</div></div>
+    </div>
+    <div class="side-label">YOUR WORKSPACE</div>
+    <nav class="nav-list">
+      <button class="nav-link active" data-page="overview"><span class="nav-icon">▦</span>Overview</button>
+      <button class="nav-link" data-page="training"><span class="nav-icon">♞</span>Training room<span class="nav-count">19</span></button>
+      <button class="nav-link" data-page="play"><span class="nav-icon">♚</span>Play vs engine</button>
+      <button class="nav-link" data-page="games"><span class="nav-icon">◷</span>Game review</button>
+      <button class="nav-link" data-page="openings"><span class="nav-icon">⌘</span>Openings</button>
+      <button class="nav-link" data-page="library"><span class="nav-icon">▣</span>Study library</button>
+      <button class="nav-link" data-page="progress"><span class="nav-icon">↗</span>My progress</button>
+    </nav>
+    <div class="side-label">PERSONAL EDITION</div>
+    <div class="unlock-card">
+      <div class="unlock-chip"><span>✦</span> EVERYTHING OPEN</div>
+      <p>All training tools are available here, with no subscription or feature limits.</p>
+    </div>
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-profile">
+      <div class="avatar" id="side-avatar">P</div>
+      <div class="profile-meta"><strong id="side-name">Chess Player</strong><span id="profile-save-status">Local autosave · cloud optional</span></div>
+      <button class="profile-settings" data-action="settings" aria-label="Profile settings">⚙</button>
+    </div>
+  </aside>
+  <div class="app-main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="top-icon mobile-menu" data-action="toggle-menu" aria-label="Open navigation">☰</button>
+        <div class="crumb">SQUAREWISE <span>/</span> <strong id="crumb-page">OVERVIEW</strong></div>
+      </div>
+      <div class="top-actions">
+        <label class="searchbox"><span>⌕</span><input id="global-search" type="search" placeholder="Find a training tool…" aria-label="Find a training tool"></label>
+        <button class="top-icon" data-action="help" aria-label="About this app">?</button>
+        <button class="top-icon cloud-account-button" data-action="cloud-account" aria-label="Sign in and sync" title="Sign in and sync">☁</button>
+        <button class="profile-button" data-action="settings" aria-label="Open profile settings"><div class="avatar" id="top-avatar">P</div><span class="profile-label"><strong id="top-name">Chess Player</strong><small>Personal profile</small></span><span class="profile-chevron">⌄</span></button>
+      </div>
+    </header>
+    <main id="content" class="content-wrap" tabindex="-1"></main>
+  </div>
+</div>
+<nav class="mobile-dock" aria-label="Mobile navigation">
+  <button class="dock-link active" data-page="overview"><span>▦</span><span>Home</span></button>
+  <button class="dock-link" data-page="training"><span>♞</span><span>Train</span></button>
+  <button class="dock-link" data-page="play"><span>♚</span><span>Play</span></button>
+  <button class="dock-link" data-page="games"><span>◷</span><span>Games</span></button>
+  <button class="dock-link" data-page="openings"><span>⌘</span><span>Openings</span></button>
+  <button class="dock-link" data-page="progress"><span>↗</span><span>Progress</span></button>
+</nav>
+<div id="modal-root"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>
+(() => {
+  'use strict';
+  const STORAGE_KEY = 'squarewise-personal-v1';
+  const defaultRepertoire = [
+    {id:'open-1',side:'White · 1.e4',name:'Italian Game',line:'1. e4 e5 2. Nf3 Nc6 3. Bc4',note:'Develop quickly, castle early, and build pressure around f7.'},
+    {id:'open-2',side:'Black · vs 1.e4',name:'Caro-Kann Defense',line:'1. e4 c6 2. d4 d5 3. Nc3 dxe4',note:'A sturdy structure with a clear plan for the light-squared bishop.'},
+    {id:'open-3',side:'Black · vs 1.d4',name:'Queen’s Gambit Declined',line:'1. d4 d5 2. c4 e6 3. Nc3 Nf6',note:'Hold the center, finish development, then challenge the c-pawn.'}
+  ];
+  const defaultStudies = [
+    {id:'study-1',type:'Endgame · 8 min',title:'The active king in rook endings',description:'A practical reminder: activity matters more than pawn counting.',note:'Bring the king toward the action before pushing the passer.',updated:'Starter note'},
+    {id:'study-2',type:'Strategy · 6 min',title:'Find the worst-placed piece',description:'A simple improvement question for quiet middlegame positions.',note:'Improve the least active piece; do not force a plan that is not there.',updated:'Starter note'},
+    {id:'study-3',type:'Tactics · 5 min',title:'Checks, captures, threats',description:'A repeatable scan for forcing moves before every decision.',note:'List forcing candidates first, then check your opponent’s reply.',updated:'Starter note'}
+  ];
+  const sampleGames = [
+    {id:'demo-1',white:'You',black:'Practice Partner',result:'1-0',date:'2026.10.17',moves:38,opening:'Italian Game',eco:'C50'},
+    {id:'demo-2',white:'Club Player',black:'You',result:'0-1',date:'2026.10.15',moves:46,opening:'Caro-Kann Defense',eco:'B12'},
+    {id:'demo-3',white:'You',black:'Rapid Opponent',result:'1/2-1/2',date:'2026.10.13',moves:31,opening:'Queen’s Gambit Declined',eco:'D30'}
+  ];
+  function freshState(){
+    return {
+      page:'overview', demo:true,
+      profile:{name:'Chess Player',rating:1420,target:1600,focus:'Endgame technique',customized:false},
+      progress:{streak:8,sessions:14,minutes:218,puzzles:62,accuracy:72,completedToday:0,lastPracticeDate:'',activity:[]},
+      tasks:{tactics:false,endgame:false,review:false},
+      importedGames:[], repertoire:JSON.parse(JSON.stringify(defaultRepertoire)), studies:JSON.parse(JSON.stringify(defaultStudies)),
+      moduleFilter:'All', moduleQuery:''
+    };
+  }
+  function loadState(){
+    const fresh=freshState();
+    try{
+      const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+      if(!saved) return fresh;
+      return {...fresh,...saved,profile:{...fresh.profile,...(saved.profile||{})},progress:{...fresh.progress,...(saved.progress||{})},tasks:{...fresh.tasks,...(saved.tasks||{})},repertoire:Array.isArray(saved.repertoire)?saved.repertoire:fresh.repertoire,studies:Array.isArray(saved.studies)?saved.studies:fresh.studies,importedGames:Array.isArray(saved.importedGames)?saved.importedGames:[]};
+    }catch(_){return fresh;}
+  }
+  let state=loadState();
+  function clearIllustrativeData(){
+    if(!state.demo)return;
+    state.demo=false;
+    state.progress={streak:0,sessions:0,minutes:0,puzzles:0,accuracy:0,completedToday:0,lastPracticeDate:'',activity:[]};
+    state.tasks={tactics:false,endgame:false,review:false};
+    if(!state.profile.customized){state.profile.rating=null;state.profile.target=null;state.profile.focus='Choose a focus';}
+  }
+  function recordTrainingScore(score=100){
+    const sessions=Math.max(0,Number(state.progress.sessions)||0);
+    const previous=Math.max(0,Number(state.progress.accuracy)||0);
+    const current=Math.max(0,Math.min(100,Number(score)||0));
+    state.progress.accuracy=Math.round(sessions?(previous*sessions+current)/(sessions+1):current);
+    const now=new Date();
+    const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const last=state.progress.lastPracticeDate;
+    if(last!==today){
+      const todaySerial=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())/86400000;
+      const parts=last?last.split('-').map(Number):[];
+      const lastSerial=parts.length===3?Date.UTC(parts[0],parts[1]-1,parts[2])/86400000:NaN;
+      const elapsed=todaySerial-lastSerial;
+      state.progress.streak=last&&elapsed===1?(Number(state.progress.streak)||0)+1:1;
+      state.progress.lastPracticeDate=today;
+    }
+    return today;
+  }
+  let activeActivity=null;
+  let toastTimer=null;
+  const $=(selector,root=document)=>root.querySelector(selector);
+  const $$=(selector,root=document)=>Array.from(root.querySelectorAll(selector));
+  const esc=(value)=>String(value??'').replace(/[&<>"']/g,(ch)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const persist=()=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(_){showToast('Could not save locally. Try exporting your data.');}try{window.SquarewiseCloud?.onLocalChange?.(state);}catch(_){}};
+  const initials=(name)=>String(name||'P').trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'P';
+  const todayLabel=()=>new Intl.DateTimeFormat('en', {weekday:'long',month:'short',day:'numeric'}).format(new Date()).toUpperCase();
+  function showToast(message){const t=$('#toast');t.textContent=message;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2500);}
+  function setPage(page){state.page=page;state.moduleQuery='';persist();render();$('#sidebar').classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
+  function updateProfileBits(){const name=state.profile.name||'Chess Player';$('#side-name').textContent=name;$('#top-name').textContent=name;$('#side-avatar').textContent=initials(name);$('#top-avatar').textContent=initials(name);window.SquarewiseCloud?.refreshIndicator?.();}
+  const skillData=[{name:'Tactics',value:76},{name:'Openings',value:69},{name:'Endgames',value:48,low:true},{name:'Clock sense',value:61}];
+  const modules=[
+    {id:'tactics',title:'Tactics sprint',cat:'Tactics',icon:'♘',badge:'Daily drill',desc:'Build pattern recognition with short, focused calculation sets.',time:'8 min',level:'Adaptive'},
+    {id:'blunder-clinic',title:'Blunder preventer',cat:'Habits',icon:'◎',badge:'High impact',desc:'Practice a reliable scan for your opponent’s checks, captures, and threats.',time:'5 min',level:'From your games'},
+    {id:'endgame-lab',title:'Endgame lab',cat:'Technique',icon:'♔',badge:'Skill builder',desc:'Sharpen king activity, pawn races, and practical rook-ending decisions.',time:'10 min',level:'All levels'},
+    {id:'openings',title:'Opening repertoire',cat:'Openings',icon:'⌘',badge:'Your lines',desc:'Save, organize, and rehearse the openings you want to play.',time:'5 min',level:'Personalized'},
+    {id:'time-trainer',title:'Clock sense',cat:'Habits',icon:'◷',badge:'Time trainer',desc:'Make better choices under time pressure without rushing every move.',time:'4 min',level:'Quick reps'},
+    {id:'visualization',title:'Blindfold visualization',cat:'Tactics',icon:'◉',badge:'Visualization',desc:'Hold a position in your mind and calculate without moving pieces.',time:'5 min',level:'No board moves'},
+    {id:'conversion',title:'Advantage conversion',cat:'Technique',icon:'↗',badge:'Win the win',desc:'Turn an edge into a full point with calm, purposeful play.',time:'6 min',level:'Practical'},
+    {id:'defense',title:'Defensive resourcefulness',cat:'Technique',icon:'⛨',badge:'Find a way',desc:'Create counterplay, active defense, and drawing chances in tough positions.',time:'6 min',level:'Resilience'},
+    {id:'intuition',title:'Move intuition',cat:'Tactics',icon:'✦',badge:'Pattern sense',desc:'Train your first read, then verify it with a short calculation check.',time:'4 min',level:'Fast reps'},
+    {id:'mate-patterns',title:'Checkmate patterns',cat:'Tactics',icon:'♕',badge:'Pattern library',desc:'Recognize back-rank, corridor, and mating-net ideas before they appear.',time:'5 min',level:'Core patterns'},
+    {id:'guess-move',title:'Guess the master move',cat:'Tactics',icon:'…',badge:'Plan finder',desc:'Choose a purposeful continuation from a familiar opening structure.',time:'5 min',level:'Position sense'},
+    {id:'opening-improver',title:'Opening improver',cat:'Openings',icon:'↻',badge:'Improve a line',desc:'Review your repertoire, add a note, and set one practical goal per line.',time:'7 min',level:'Spaced review'},
+    {id:'game-puzzles',title:'Puzzles from your games',cat:'Games',icon:'♟',badge:'PGN-ready',desc:'Bring your own games into the room and build a personal mistake-to-drill workflow.',time:'Your games',level:'Import PGN'},
+    {id:'coach-notes',title:'Coach explanations',cat:'Games',icon:'✎',badge:'Plain language',desc:'Turn a move or recurring theme into a clear lesson and a next action.',time:'3 min',level:'Coach notes'},
+    {id:'statistics',title:'My statistics',cat:'Games',icon:'▥',badge:'Progress',desc:'Review your sessions, streak, accuracy, and areas you are working on.',time:'Anytime',level:'Your history'},
+    {id:'sparring',title:'Guided sparring',cat:'Technique',icon:'⚔',badge:'Practice partner',desc:'Work through practical decision points against a guided opponent scenario.',time:'6 min',level:'Scenario play'},
+    {id:'studies',title:'Studies & practices',cat:'Games',icon:'▣',badge:'Your library',desc:'Keep reusable study notes, plans, and practice reminders in one place.',time:'Saved notes',level:'Personal library'},
+    {id:'scouting',title:'Opponent scouting',cat:'Games',icon:'⌕',badge:'Game patterns',desc:'Organize opponent notes and spot trends from the PGNs you import.',time:'Your games',level:'Local review'}
+  ];
+  const moduleConfig={
+    tactics:{type:'board',title:'Knight fork · find the forcing move',subtitle:'White to move. Find a move that checks the king and attacks another valuable piece.',coach:'Look for a knight jump that lands with tempo. The king and queen can both be targets.',success:'Correct — Ne5+ forks the king on d7 and the queen on f7. A forcing move can win material before the opponent has time to regroup.',tag:'TACTICS · 1 POSITION'},
+    'blunder-clinic':{type:'choice',title:'Build a blunder-check habit',subtitle:'You are about to make a natural-looking move. What quick scan should come first?',coach:'A short, repeatable checklist is easier to use consistently than vague advice to “be careful.”',options:[['checks','List forcing checks, captures, and threats — then look for the opponent’s reply.'],['fast','Play the first move that feels familiar.'],['attack','Only calculate your own attacking idea.']],correct:'checks',success:'Exactly. A forcing-move scan catches many one-move oversights, and checking the opponent’s reply closes the loop.'},
+    'endgame-lab':{type:'choice',title:'Rook ending: activate first',subtitle:'You have a rook and pawn each. Your king is passive, while the opponent’s king is active. What is the practical priority?',coach:'In rook endings, king activity and rook activity often matter more than pushing a pawn immediately.',options:[['king','Improve your king and rook activity before committing the pawn.'],['push','Push the pawn at once, even if the rook is passive.'],['trade','Offer a rook trade without checking the resulting king-and-pawn ending.']],correct:'king',success:'Good technique. Improve the pieces first; only advance when the rook and king can support the passer.'},
+    'time-trainer':{type:'choice',title:'A calmer clock decision',subtitle:'You have about 20 seconds in a quiet position. What is a useful way to spend your time?',coach:'The goal is not to use the same number of seconds on every move; it is to spend time where the position demands it.',options:[['scan','Check forcing candidates, choose a safe improving move, and keep a small reserve.'],['rush','Move instantly every time to save the clock.'],['calculate','Calculate every possible branch until there is no time left.']],correct:'scan',success:'Right. Scan the forcing options, make a purposeful choice, and preserve enough time to handle the next critical moment.'},
+    visualization:{type:'input',title:'Hold the knight in your mind',subtitle:'Without drawing a line on the board: a knight travels from c3 to e4, then from e4 to f6. What is its final square?',coach:'Visualize one move at a time. A knight changes one file and two ranks, or two files and one rank.',answer:'f6',success:'Correct — the final square is f6. You tracked two jumps without moving a piece.'},
+    conversion:{type:'choice',title:'Convert a small advantage',subtitle:'You are a healthy pawn up in a rook endgame. Which plan is most reliable?',coach:'A winning position still needs a plan. Avoid creating counterplay while your pieces are uncoordinated.',options:[['activate','Activate the king, improve the rook, then advance the passer when supported.'],['rush','Push every pawn immediately to force a race.'],['freeze','Keep all pieces on their original squares and wait.']],correct:'activate',success:'That is the practical route: coordinate first, restrict counterplay, and make the pawn break when your pieces are ready.'},
+    defense:{type:'choice',title:'Find a practical defensive resource',subtitle:'You are down a pawn, but your pieces are active. What gives you the best practical chances?',coach:'Defending is active work: seek a threat that forces the opponent to respond.',options:[['counterplay','Create counterplay with threats against the king or loose pawns.'],['passive','Trade every active piece and wait passively.'],['resign','Assume the position is lost before checking for resources.']],correct:'counterplay',success:'Exactly. Active counterplay makes the opponent solve problems and can create drawing chances.'},
+    intuition:{type:'choice',title:'Trust your first read — then test it',subtitle:'A move looks natural and you like it. What is the best next step?',coach:'Intuition is a useful candidate generator. A quick verification makes it safer.',options:[['verify','Name the opponent’s best reply and check for a forcing tactic.'],['play','Play without checking because it feels right.'],['restart','Discard the idea and search for a completely different plan.']],correct:'verify',success:'Good balance. Keep the candidate, then make sure it survives the opponent’s forcing reply.'},
+    'mate-patterns':{type:'choice',title:'Spot the back-rank weakness',subtitle:'A king is boxed in by its own pawns on the back rank. Which pattern should immediately be on your radar?',coach:'Mating patterns often depend on limited escape squares and pieces that cannot coordinate in time.',options:[['backrank','A rook or queen invasion on the back rank.'],['opposite','A distant passed pawn with no checks available.'],['exchange','A quiet exchange of a rook for a bishop.']],correct:'backrank',success:'Yes — when escape squares are blocked, a back-rank invasion may be decisive. Always check whether the king has a flight square.'},
+    'guess-move':{type:'choice',title:'Guess a purposeful developing move',subtitle:'After 1.e4 e5 2.Nf3 Nc6, which bishop move develops and points at the f7 weakness?',coach:'Strong opening moves often develop a piece while creating a useful target or controlling a key square.',options:[['bc4','3. Bc4'],['h4','3. h4'],['a3','3. a3']],correct:'bc4',success:'Correct — 3.Bc4 develops with tempo in mind and places pressure on f7. The move still needs to fit the position, not just the pattern.'},
+    'opening-improver':{type:'choice',title:'When your opening prep ends',subtitle:'Your opponent makes an unfamiliar move on move four. What should guide your next decision?',coach:'A repertoire should support good chess, not replace it. Return to the position’s needs when memory runs out.',options:[['principles','Develop, contest the center, and keep king safety in view.'],['memorize','Spend several minutes trying to recall a line no matter what.'],['attack','Launch a flank pawn before completing development.']],correct:'principles',success:'Exactly. Use opening principles to find a sound move, then add the new position to your repertoire for later review.'},
+    'game-puzzles':{type:'choice',title:'Turn a game into a useful drill',subtitle:'You imported games. What is the most useful way to work with a recurring mistake?',coach:'A PGN tells us the moves and result; verifying critical positions with a chess engine is a future integration step for this local prototype.',options:[['theme','Identify a recurring theme, verify the critical position, then drill the decision.'],['result','Only review the final result and move on.'],['random','Train a random puzzle unrelated to the game.']],correct:'theme',success:'Good workflow. Find the repeated decision, verify what the position called for, and build a focused practice reminder.'},
+    'coach-notes':{type:'choice',title:'Write a coach-quality takeaway',subtitle:'After a game, which note is most likely to change your next decision?',coach:'A useful lesson is specific enough to recall at the board and small enough to practice.',options:[['specific','“Before trading, check whether my active piece is doing more work than theirs.”'],['vague','“I need to play better.”'],['blame','“My opponent got lucky.”']],correct:'specific',success:'That note is specific and repeatable. Turn the observation into a small question you can ask in your next game.'},
+    sparring:{type:'choice',title:'Guided sparring · choose a plan',subtitle:'Your opponent has just weakened their king but is a pawn ahead. What should you look for first?',coach:'Use forcing moves to test whether the king weakness gives you a concrete chance.',options:[['forcing','Checks and forcing threats that exploit the king’s exposed squares.'],['trade','Offer a queen trade without checking the tactics.'],['pawn','Push a random pawn to create activity.']],correct:'forcing',success:'Good practical choice. Check the forcing moves first; if there is no concrete attack, improve your position without overextending.'}
+  };
+  const routeModules={openings:'openings','opening-improver':'openings',statistics:'progress',studies:'library',scouting:'games'};
+  function render(){
+    const page=state.page||'overview';
+    const pages={overview:renderOverview,training:renderTraining,games:renderGames,openings:renderOpenings,library:renderLibrary,progress:renderProgress,...(window.SquarewiseExtras?.pages||{})};
+    $('#content').innerHTML=(pages[page]||renderOverview)();
+    const names={overview:'OVERVIEW',training:'TRAINING ROOM',games:'GAME REVIEW',openings:'OPENINGS',library:'STUDY LIBRARY',progress:'MY PROGRESS',...(window.SquarewiseExtras?.pageNames||{})};
+    $('#crumb-page').textContent=names[page]||'OVERVIEW';
+    $$('.nav-link').forEach(button=>button.classList.toggle('active',button.dataset.page===page));
+    $$('.dock-link').forEach(button=>button.classList.toggle('active',button.dataset.page===page));
+    updateProfileBits();
+  }
+  function renderOverview(){
+    const firstName=(state.profile.name||'Chess Player').trim().split(/\s+/)[0]||'Player';
+    const rating=Number(state.profile.rating);
+    const ratingDisplay=Number.isFinite(rating)&&rating>0?rating:'—';
+    const streak=Number(state.progress.streak)||0;
+    const plan=[
+      {id:'tactics',title:'Tactics warm-up',sub:'A short calculation set to get focused',time:'8 MIN',module:'tactics'},
+      {id:'endgame',title:'Endgame technique',sub:'Work on king activity and pawn races',time:'10 MIN',module:'endgame-lab'},
+      {id:'review',title:'Review one recent game',sub:'Spot one decision to revisit this week',time:'5 MIN',module:'game-puzzles'}
+    ];
+    return `
+      ${state.demo?`<div class="demo-notice"><span class="notice-mark">i</span><span><strong>Illustrative profile.</strong> These sample numbers are not your data. Import a PGN to start building your own local training history.</span><button class="text-link" data-page="games">Import games&nbsp; →</button></div>`:''}
+      <div class="page-heading"><div><p class="eyebrow">${todayLabel()} <span style="padding:0 5px;color:#aeb7aa">·</span> YOUR TRAINING DASHBOARD</p><h1>Good to see you, ${esc(firstName)}.</h1><p class="page-subtitle">Make every study session count. Your tools, your pace, your own chess room.</p></div><button class="primary-button" data-action="start-session">Start today’s session <span class="button-arrow">↗</span></button></div>
+      <section class="hero-banner"><div class="hero-copy"><div class="hero-kicker">PERSONAL EDITION · ALL 19 TOOLS OPEN</div><h2>Build your edge, one thoughtful move at a time.</h2><p>Focused practice for the parts of chess that decide your games—from tactics and endgames to clock habits and your own opening lines.</p><div class="hero-actions"><button class="secondary-button" data-action="start-session">Start a 15-minute session <span class="button-arrow">→</span></button><button class="hero-secondary" data-page="training">Explore all training tools&nbsp; ↗</button></div></div><div class="hero-art" aria-hidden="true"><div class="hero-board"><span>♜</span><span></span><span>♞</span><span></span><span></span><span>♟</span><span></span><span>♕</span><span>♙</span><span></span><span>♟</span><span></span><span></span><span>♔</span><span></span><span>♖</span></div><div class="floating-score"><span>YOUR NEXT FOCUS</span><strong>${esc(state.profile.focus||'Endgame technique')}<i>↗</i></strong></div></div></section>
+      <section class="metric-grid">
+        <div class="card metric-card"><div class="metric-head"><span>Rapid rating</span><span class="metric-icon">♟</span></div><div class="metric-value">${ratingDisplay}<small>${state.demo?'+36 sample trend':ratingDisplay==='—'?'OPTIONAL':'PROFILE SET'}</small></div><div class="metric-foot">${state.demo?'Example rating · edit in profile':ratingDisplay==='—'?'Add your rating in profile settings':'Self-reported profile rating'}</div><svg class="metric-spark" viewBox="0 0 64 24" aria-hidden="true"><path d="M2 20 L12 15 L21 17 L30 9 L40 12 L51 5 L62 3" fill="none" stroke="#89a75e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="card metric-card"><div class="metric-head"><span>Training streak</span><span class="metric-icon">✦</span></div><div class="metric-value">${streak}<small>DAY${streak===1?'':'S'}</small></div><div class="metric-foot">A little consistency goes a long way</div><svg class="metric-spark" viewBox="0 0 64 24" aria-hidden="true"><path d="M2 18 L11 18 L20 15 L29 15 L38 10 L48 10 L56 5 L62 5" fill="none" stroke="#c59c5b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="card metric-card"><div class="metric-head"><span>Study time</span><span class="metric-icon">◷</span></div><div class="metric-value">${Math.floor((state.progress.minutes||0)/60)}<small>HRS</small></div><div class="metric-foot">${state.progress.minutes%60} minutes logged in total</div><svg class="metric-spark" viewBox="0 0 64 24" aria-hidden="true"><path d="M2 18 L11 12 L20 16 L29 9 L38 11 L48 4 L56 8 L62 2" fill="none" stroke="#7394a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="card metric-card"><div class="metric-head"><span>Sessions completed</span><span class="metric-icon">✓</span></div><div class="metric-value">${state.progress.sessions||0}<small>SESSIONS</small></div><div class="metric-foot">${state.progress.puzzles||0} practice reps logged</div><svg class="metric-spark" viewBox="0 0 64 24" aria-hidden="true"><path d="M2 20 L12 17 L21 18 L30 12 L40 13 L49 7 L57 9 L62 3" fill="none" stroke="#8b7ca5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </section>
+      <section class="overview-grid">
+        <div class="card panel"><div class="panel-head"><div><h2>Quick practice picks</h2><p>Standalone reps to pair with your guided session.</p></div><span class="sample-tag">QUICK REPS</span></div><div class="plan-list">${plan.map(item=>`<div class="plan-item"><button class="task-check ${state.tasks[item.id]?'done':''}" data-task="${item.id}" aria-label="Mark ${esc(item.title)} complete">✓</button><div class="task-copy"><strong>${esc(item.title)}</strong><span>${esc(item.sub)}</span></div><span class="task-time">${item.time}</span><button class="task-start" data-module="${item.module}">Start</button></div>`).join('')}</div><div class="skill-footer"><span>Completed today: <strong style="color:#344632">${Object.values(state.tasks).filter(Boolean).length} / 3</strong></span><button class="text-link" data-page="training">Build a custom plan →</button></div></div>
+        <div class="card panel"><div class="panel-head"><div><h2>Skill snapshot</h2><p>${state.demo?'Example baseline · replace with your own games':'Starter benchmarks · not engine-derived'}</p></div><span class="sample-tag">${state.demo?'SAMPLE':'STARTER'}</span></div><div class="skill-list">${skillData.map(item=>`<div class="skill-row"><span class="skill-name">${item.name}</span><div class="skill-track"><div class="skill-fill ${item.low?'low':''}" style="width:${item.value}%"></div></div><span class="skill-pct">${item.value}%</span></div>`).join('')}</div><div class="skill-footer"><span>Use your games to uncover real patterns.</span><button class="text-link" data-page="games">Review games →</button></div></div>
+      </section>
+      <div class="shortcut-heading"><div><h2>Pick up where you want to improve</h2><p>Quick access to your most useful practice modes.</p></div><button class="text-link" data-page="training">All 19 tools →</button></div>
+      <section class="shortcut-grid">${[['tactics','♘','Tactics sprint','Quick puzzles to warm up your calculation.'],['endgame-lab','♔','Endgame lab','Practice king activity and pawn technique.'],['time-trainer','◷','Clock sense','Make calmer choices when the clock is low.'],['openings','⌘','Opening repertoire','Review your lines and add a new idea.']].map(item=>`<button class="shortcut-card" data-module="${item[0]}"><span class="shortcut-arrow">↗</span><span class="shortcut-icon">${item[1]}</span><strong>${item[2]}</strong><span>${item[3]}</span></button>`).join('')}</section>
+      <section class="recent-grid"><div class="card panel"><div class="panel-head"><div><h2>Recent games</h2><p>${state.importedGames.length?`${state.importedGames.length} games imported on this device`:state.demo?'Example games · import your own PGN':'Import a PGN to see your game list'}</p></div><button class="text-link" data-page="games">Open game review →</button></div><div class="game-list">${(state.importedGames.length?state.importedGames.slice(0,3):state.demo?sampleGames:[]).map(game=>`<div class="game-row"><div class="game-opponent"><strong>${esc(game.white)} <span style="color:#a3aba0;font-weight:400">vs</span> ${esc(game.black)}</strong><span>${esc(game.opening||'Opening not tagged')} · ${esc(game.date||'Date not set')}</span></div><span class="game-tag">${Number(game.moves)||0} moves</span><span class="result-pill ${game.result==='1-0'?'result-win':game.result==='0-1'?'result-loss':'result-draw'}">${esc(game.result||'—')}</span></div>`).join('')||'<div class="small-muted" style="padding:12px 0">No games imported yet. Add a PGN to start your review library.</div>'}</div></div><div class="card panel"><div class="panel-head"><div><h2>A useful reminder</h2><p>One idea to take to your next game.</p></div><span class="sample-tag">COACH NOTE</span></div><div class="coach-note"><div class="note-icon">✦</div><strong>Make the position answer your plan.</strong><p>Before you commit to a move, ask: “What is my opponent threatening, and what changes after I move?”</p><small>Small questions. Better decisions.</small></div></div></section>`;
+  }
+  function renderTraining(){
+    const filters=['All','Tactics','Technique','Habits','Openings','Games'];
+    const filtered=state.moduleFilter||'All';
+    return `<div class="page-heading"><div><p class="eyebrow">A COMPLETE PERSONAL CHESS TOOLKIT</p><h1>Training room</h1><p class="page-subtitle">19 practical modes, plus guided multi-round sessions shaped by your focus, recent results, and saved game drills.</p></div><span class="sample-tag" style="font-size:9px;padding:7px 10px">✦ NO PREMIUM LOCKS</span></div>
+      <div class="info-strip"><span class="info-icon">✦</span><div><strong>Every tool is open for your own practice.</strong> This local-first build keeps your profile, notes, and imported PGNs on this device. Import a PGN to start shaping your own review routine.</div></div>
+      <section class="card guided-session-launch"><div class="guided-session-mark">♞</div><div class="guided-session-copy"><span class="eyebrow">A SESSION, NOT A SINGLE QUIZ</span><h2>Build a guided practice set</h2><p>Train for 10, 15, or 20 minutes with a warm-up, a focus rep, and legal board puzzles. If you’ve saved game drills, bring them into the session.</p></div><button class="primary-button" data-action="start-session">Build my session <span class="button-arrow">→</span></button></section>
+      <div class="training-toolbar"><div class="filter-row">${filters.map(f=>`<button class="filter-chip ${filtered===f?'active':''}" data-filter="${f}">${f}</button>`).join('')}</div><label class="catalog-search"><span>⌕</span><input id="module-search" type="search" placeholder="Search training tools…" value="${esc(state.moduleQuery||'')}"></label></div>
+      <div class="module-grid" id="module-grid">${modules.map(m=>`<button class="module-card" data-module="${m.id}" data-category="${m.cat}" data-search="${esc((m.title+' '+m.desc+' '+m.cat+' '+m.badge).toLowerCase())}"><div class="module-top"><span class="module-icon">${m.icon}</span><span class="module-badge">${m.badge}</span></div><h3>${m.title}</h3><p>${m.desc}</p><div class="module-foot"><span>${m.time}</span><strong>${m.level} <span aria-hidden="true">↗</span></strong></div></button>`).join('')}</div><p id="no-modules" class="small-muted" style="display:none;padding:20px;text-align:center">No tools match that search. Try another word.</p>`;
+  }
+  function resultClass(result){return result==='1-0'?'result-win':result==='0-1'?'result-loss':'result-draw';}
+  function renderGames(){
+    const imported=state.importedGames.length>0;
+    const games=imported?state.importedGames:state.demo?sampleGames:[];
+    const wins=games.filter(g=>g.result==='1-0').length, losses=games.filter(g=>g.result==='0-1').length, draws=games.filter(g=>g.result==='1/2-1/2').length;
+    return `<div class="page-heading"><div><p class="eyebrow">YOUR MOVES · YOUR PATTERNS</p><h1>Game review</h1><p class="page-subtitle">Bring your games into one private workspace and turn them into purposeful practice.</p></div><button class="primary-button" data-action="import-pgn">Import PGN <span class="button-arrow">＋</span></button></div>
+      <div class="info-strip"><span class="info-icon">♞</span><div><strong>Full PGN replay and local Stockfish analysis.</strong>Legal moves, move-by-move evaluations, candidate lines, and mistake review run in your browser. Game data is not sent to a chess engine service.</div></div>
+      <div class="review-top-grid"><div class="card import-card"><div><h2>${imported?'Add more games to your library':'Start with your own games'}</h2><p>Paste a PGN or choose a .pgn file exported from Chess.com, Lichess, or another chess tool. Your data stays in this browser.</p></div><div class="import-actions"><button class="primary-button" data-action="import-pgn">Paste PGN</button><button class="outline-button" data-action="sync-chesscom">Chess.com</button><button class="outline-button" data-action="sync-lichess">Lichess</button><button class="quiet-button" data-action="load-example">Try example</button></div></div><div class="card mini-stats"><h3>${state.demo&&!imported?'EXAMPLE SUMMARY':'LOCAL PGN SUMMARY'}</h3><div class="mini-stat-row"><span>Games in view</span><strong>${games.length}</strong></div><div class="mini-stat-row"><span>White wins</span><strong>${wins}</strong></div><div class="mini-stat-row"><span>Black wins</span><strong>${losses}</strong></div><div class="mini-stat-row"><span>Draws</span><strong>${draws}</strong></div></div></div>
+      <div class="card panel"><div class="panel-head"><div><h2>${imported?'Imported games':'Your game list'}</h2><p>${imported?'Parsed locally from your PGN':'Sample rows are shown for preview only'}</p></div>${imported?`<button class="text-link" data-action="clear-games">Clear imported games</button>`:''}</div>${games.length?`<div class="table-wrap"><table class="game-table"><thead><tr><th>Players</th><th>Result</th><th>Opening</th><th>Date</th><th>Moves</th><th>Replay</th></tr></thead><tbody>${games.map((g,index)=>`<tr><td><strong>${esc(g.white||'White')} vs ${esc(g.black||'Black')}</strong>${g.eco?`<span class="small-muted">${esc(g.eco)}</span>`:''}</td><td><span class="result-pill ${resultClass(g.result)}">${esc(g.result||'—')}</span></td><td>${esc(g.opening||'Not tagged')}</td><td>${esc(g.date||'—')}</td><td>${Number(g.moves)||0}</td><td>${g.pgn?`<button class="text-link" data-action="view-game" data-index="${index}">Review & analyze →</button>`:'—'}</td></tr>`).join('')}</tbody></table></div>`:`<div class="empty-state"><div class="empty-icon">♟</div><strong>Your game list will appear here</strong><p>Import your first PGN to start a private archive. You can also continue using every training mode without importing games.</p><button class="primary-button" data-action="import-pgn">Import a PGN</button></div>`}</div>
+      <div class="shortcut-heading"><div><h2>Make the review actionable</h2><p>Simple workflow, no score-chasing.</p></div></div><div class="shortcut-grid"><div class="shortcut-card" style="cursor:default"><span class="shortcut-icon">1</span><strong>Find a decision</strong><span>Choose a moment that changed your plan or made the game difficult.</span></div><div class="shortcut-card" style="cursor:default"><span class="shortcut-icon">2</span><strong>Verify the position</strong><span>Use an engine or coach to confirm the best move before drawing a lesson.</span></div><div class="shortcut-card" style="cursor:default"><span class="shortcut-icon">3</span><strong>Train the theme</strong><span>Pick a focused drill and save one question to your study library.</span></div><div class="shortcut-card" data-page="library" style="cursor:pointer"><span class="shortcut-icon">▣</span><strong>Save a takeaway</strong><span>Keep your personal study notes together. <b style="color:#527548">Open library →</b></span></div></div>`;
+  }
+  function renderOpenings(){
+    return `<div class="page-heading"><div><p class="eyebrow">YOUR LINES · YOUR IDEAS</p><h1>Opening repertoire</h1><p class="page-subtitle">Keep a small, useful repertoire with the plans and reminders you want to remember.</p></div><button class="primary-button" data-action="add-opening">Add an opening <span class="button-arrow">＋</span></button></div>
+      <div class="info-strip"><span class="info-icon">⌘</span><div><strong>Rehearse ideas, not just move strings.</strong> Add a short plan or question to each line. This personal build stores your repertoire locally and includes no gated opening tools.</div></div>
+      <div class="opening-grid">${state.repertoire.map((line,index)=>`<article class="card opening-card"><div class="opening-header"><span class="opening-side">${esc(line.side||'Personal line')}</span><span class="module-badge">${line.reviewed?'REVIEWED':'READY TO REVIEW'}</span></div><h3>${esc(line.name)}</h3><div class="opening-line">${esc(line.line||'Add a move sequence to this line.')}</div><p class="opening-note">${esc(line.note||'Add a practical plan or reminder.')}</p><div class="opening-actions"><button class="outline-button" data-action="review-opening" data-index="${index}">Practice line</button><button class="quiet-button" data-action="edit-opening" data-index="${index}">Edit</button></div></article>`).join('')}
+      <button class="add-card" data-action="add-opening"><span class="plus">＋</span><strong>Add your next line</strong><span>White repertoire, a defense, or a tricky sideline.</span></button></div>
+      <section class="card panel"><div class="panel-head"><div><h2>Simple review rhythm</h2><p>Short spaced reviews help keep your lines available at the board.</p></div><span class="sample-tag">PERSONAL PRACTICE</span></div><div class="plan-list"><div class="plan-item"><span class="task-check done">✓</span><div class="task-copy"><strong>Recall the first 3–5 moves</strong><span>Say the moves out loud before checking the line.</span></div><span class="task-time">1 MIN</span></div><div class="plan-item"><span class="task-check">✓</span><div class="task-copy"><strong>Recall the plan, not just the move</strong><span>What are you trying to achieve in the resulting position?</span></div><span class="task-time">2 MIN</span></div><div class="plan-item"><span class="task-check">✓</span><div class="task-copy"><strong>Write down the opponent’s best sideline</strong><span>Keep the repertoire honest and practical.</span></div><span class="task-time">2 MIN</span></div></div></section>`;
+  }
+  function renderLibrary(){
+    return `<div class="page-heading"><div><p class="eyebrow">SAVE THE IDEAS WORTH KEEPING</p><h1>Study library</h1><p class="page-subtitle">A lightweight home for your chess lessons, questions, and recurring reminders.</p></div><button class="primary-button" data-action="add-study">New study note <span class="button-arrow">＋</span></button></div>
+      <div class="info-strip"><span class="info-icon">▣</span><div><strong>Your notes are private and stored on this device.</strong> Keep takeaways short enough to remember in a real game. Export your data anytime from My Progress.</div></div>
+      <div class="library-grid">${state.studies.map(study=>`<article class="card study-card"><span class="study-type">${esc(study.type||'Study note')}</span><h3>${esc(study.title)}</h3><p>${esc(study.description||study.note||'Your personal chess reminder.')}</p><div class="study-footer"><span>${esc(study.updated||'Saved locally')}</span><span>✦</span></div><div class="study-actions"><button class="outline-button" data-action="edit-study" data-id="${esc(study.id)}">Open note</button><button class="quiet-button" data-action="delete-study" data-id="${esc(study.id)}">Remove</button></div></article>`).join('')}
+      <button class="add-card" data-action="add-study"><span class="plus">＋</span><strong>Capture a new idea</strong><span>Save a question, plan, position theme, or endgame reminder.</span></button></div>`;
+  }
+  function renderProgress(){
+    const progress=state.progress;
+    const logs=Array.isArray(progress.activity)?progress.activity:[];
+    const now=new Date();
+    const chartValues=state.demo?[38,46,44,58,55,68,64,77,72,82,79,91]:Array(12).fill(0);
+    const recentMinutes=Array(7).fill(0);
+    const midnight=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const todaySerial=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())/86400000;
+    logs.forEach(item=>{
+      const date=new Date(`${item.date||''}T12:00:00`);
+      if(Number.isNaN(date.getTime()))return;
+      const daySerial=Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())/86400000;
+      const daysAgo=todaySerial-daySerial;
+      if(!state.demo&&daysAgo>=0&&daysAgo<84)chartValues[11-Math.floor(daysAgo/7)]++;
+      if(!state.demo&&daysAgo>=0&&daysAgo<7)recentMinutes[6-daysAgo]+=Number(item.minutes)||(item.module==='game-derived-drill'?4:5);
+    });
+    const chartMax=Math.max(state.demo?100:4,...chartValues,1);
+    const points=chartValues.map((value,i)=>`${(i/(chartValues.length-1))*600},${150-(value/chartMax)*125}`).join(' ');
+    const chartLastY=150-(chartValues[chartValues.length-1]/chartMax)*125;
+    const demoWeek=[35,60,40,78,25,92,48];
+    const weekMax=Math.max(...recentMinutes,1);
+    const weekLabels=Array.from({length:7},(_,i)=>{const d=new Date(midnight);d.setDate(d.getDate()-(6-i));return new Intl.DateTimeFormat('en',{weekday:'short'}).format(d);});
+    return `<div class="page-heading"><div><p class="eyebrow">SMALL WINS · LONG-TERM STRENGTH</p><h1>My progress</h1><p class="page-subtitle">See the habits you are building and choose what to work on next.</p></div><button class="outline-button" data-action="export-data">Export my data <span class="button-arrow">↓</span></button></div>
+      ${state.demo?`<div class="demo-notice"><span class="notice-mark">i</span><span>Sample figures are illustrative until you log your own training or import games.</span></div>`:''}
+      <section class="metric-grid"><div class="card metric-card"><div class="metric-head"><span>Current streak</span><span class="metric-icon">✦</span></div><div class="metric-value">${progress.streak}<small>DAYS</small></div><div class="metric-foot">Consistency over intensity</div></div><div class="card metric-card"><div class="metric-head"><span>Practice sessions</span><span class="metric-icon">✓</span></div><div class="metric-value">${progress.sessions}<small>LOGGED</small></div><div class="metric-foot">Every focused rep counts</div></div><div class="card metric-card"><div class="metric-head"><span>Practice reps</span><span class="metric-icon">♘</span></div><div class="metric-value">${progress.puzzles}<small>DRILLS</small></div><div class="metric-foot">Tactics and training activities</div></div><div class="card metric-card"><div class="metric-head"><span>Practice accuracy</span><span class="metric-icon">◎</span></div><div class="metric-value">${progress.accuracy}<small>%</small></div><div class="metric-foot">Local activity estimate</div></div></section>
+      <section class="progress-grid"><div class="card chart-card"><div class="panel-head"><div><h2>Training rhythm</h2><p>${state.demo?'Illustrative demo trend.':'Sessions per week from your local training log.'}</p></div><span class="sample-tag">LAST 12 WEEKS</span></div><div class="chart-wrap"><svg viewBox="0 0 600 170" role="img" aria-label="${state.demo?'Illustrative training trend line':'Sessions per week from local activity'}"><defs><linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a8c878" stop-opacity=".28"/><stop offset="1" stop-color="#a8c878" stop-opacity="0"/></linearGradient></defs><path d="M0 145H600 M0 105H600 M0 65H600 M0 25H600" stroke="#edf0e9" stroke-width="1"/><path d="M0,150 L${points} L600,150 Z" fill="url(#areaFill)"/><polyline points="${points}" fill="none" stroke="#648b51" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="600" cy="${chartLastY}" r="4" fill="#d5f06d" stroke="#507847" stroke-width="2"/></svg></div><div class="chart-labels"><span>12 weeks ago</span><span>6 weeks</span><span>This week</span></div><div class="progress-summary"><div class="summary-tile"><strong>${Math.floor(progress.minutes/60)}h ${progress.minutes%60}m</strong><span>Time invested</span></div><div class="summary-tile"><strong>${progress.sessions}</strong><span>Sessions</span></div><div class="summary-tile"><strong>${progress.accuracy}%</strong><span>Practice accuracy</span></div></div></div>
+      <div class="card panel"><div class="panel-head"><div><h2>Skill focus</h2><p>Example areas to rotate through.</p></div><span class="sample-tag">TRAINING ESTIMATE</span></div><div class="focus-bars">${skillData.map(item=>`<div class="focus-bar-row"><div class="skill-row"><span class="skill-name">${item.name}</span><div class="skill-track"><div class="skill-fill ${item.low?'low':''}" style="width:${item.value}%"></div></div><span class="skill-pct">${item.value}%</span></div></div>`).join('')}</div><div class="skill-footer"><span>Choose the next focus that fits your games.</span><button class="text-link" data-page="training">Train a skill →</button></div></div></section>
+      <section class="card panel" style="margin-top:14px"><div class="panel-head"><div><h2>Sessions this week</h2><p>${state.demo?'Illustrative weekly activity.':'Minutes logged each day on this device.'}</p></div><span class="sample-tag">THIS WEEK</span></div><div class="weekly-bars">${weekLabels.map((label,i)=>{const value=state.demo?demoWeek[i]:recentMinutes[i];const height=state.demo?value:(value?Math.max(5,(value/weekMax)*100):2);return `<div class="weekly-col"><div class="weekly-bar ${i===6?'current':''}" style="height:${height}%" title="${value} minutes"></div><span>${label[0]}</span></div>`;}).join('')}</div><div class="progress-actions"><button class="outline-button" data-action="export-data">Download personal data</button><button class="quiet-button" data-action="reset-data">Reset this local profile</button></div></section>`;
+  }
+  function renderBoard(){
+    const pieces={'d7':['♚','black'],'f7':['♛','black'],'c4':['♘','white']};
+    let html='<div class="board-area"><div class="chessboard" role="grid" aria-label="Chess puzzle board">';
+    for(let row=0;row<8;row++){
+      for(let col=0;col<8;col++){
+        const file='abcdefgh'[col], rank=8-row, sq=file+rank, piece=pieces[sq];
+        const dark=(row+col)%2===1;
+        const selected=activeActivity?.selectedSquare===sq;
+        const target=sq==='e5';
+        const pieceHtml=piece?`<span class="piece ${piece[1]}-piece">${piece[0]}</span>`:'';
+        const coord=(col===0?`<span class="coord">${rank}</span>`:'')+(row===7?`<span class="coord" style="left:auto;right:3px">${file}</span>`:'');
+        html+=`<button class="square ${dark?'dark':'light'} ${selected?'selected':''} ${target?'target':''}" data-square="${sq}" role="gridcell" aria-label="${sq}${piece?' '+(piece[1]==='white'?'white':'black')+' piece':''}">${pieceHtml}${coord}</button>`;
+      }
+    }
+    return html+'</div></div><div class="board-help"><span>White to move</span><span>Select the knight, then its destination</span></div>';
+  }
+  function openModule(id){
+    if(window.SquarewiseExtras?.openModule?.(id))return;
+    if(routeModules[id]){setPage(routeModules[id]);return;}
+    if(id==='game-puzzles'&&!state.importedGames.length){openPgnModal();return;}
+    const config=moduleConfig[id];
+    if(!config){showToast('This tool is ready to use.');return;}
+    activeActivity={id,config,solved:false,message:'',selectedSquare:'',answer:'',mistakes:0};
+    renderActivityModal();
+  }
+  function renderActivityModal(){
+    if(!activeActivity)return;
+    const {id,config}=activeActivity;
+    let body='';
+    if(activeActivity.solved){
+      body=`<div class="activity-complete"><div class="complete-mark">✓</div><h3>Nice work.</h3><p>${esc(config.success||'That is a useful decision to remember. Keep building on it.')}</p><button class="primary-button" data-action="complete-session">Finish this session <span class="button-arrow">→</span></button></div>`;
+    }else if(config.type==='board'){
+      body=`${renderBoard()}${activeActivity.message?`<div class="feedback-box retry">${esc(activeActivity.message)}</div>`:''}`;
+    }else if(config.type==='input'){
+      body=`<div class="answer-input-row"><input id="activity-answer" type="text" placeholder="Type a square, e.g. f6" value="${esc(activeActivity.answer||'')}" autocomplete="off"><button class="primary-button" data-action="submit-answer">Check answer</button></div>${activeActivity.message?`<div class="feedback-box ${activeActivity.message.startsWith('Correct')?'success':'retry'}">${esc(activeActivity.message)}</div>`:''}`;
+    }else{
+      body=`<div class="choice-list">${config.options.map((option,index)=>`<button class="choice-button ${activeActivity.selected===option[0]?(option[0]===config.correct?'correct':'wrong'):''}" data-choice="${option[0]}"><span class="choice-letter">${String.fromCharCode(65+index)}</span><span>${esc(option[1])}</span></button>`).join('')}</div>${activeActivity.message?`<div class="feedback-box ${activeActivity.solved?'success':'retry'}">${esc(activeActivity.message)}</div>`:''}`;
+    }
+    $('#modal-root').innerHTML=`<div class="modal-backdrop" data-action="backdrop-close"><section class="modal-panel modal-wide activity-modal" role="dialog" aria-modal="true" aria-labelledby="activity-title"><div class="modal-head"><div><div class="eyebrow">${esc(config.tag||'FOCUSED PRACTICE')}</div><h2 id="activity-title" class="activity-title">${esc(config.title)}</h2><p class="activity-instruction">${esc(config.subtitle)}</p></div><button class="icon-button modal-close" data-action="close-modal" aria-label="Close">×</button></div>${activeActivity.solved?'':`<div class="progress-track"><span style="width:${activeActivity.solved?'100%':'35%'}"></span></div>`}<div class="activity-shell"><div class="activity-main">${body}<div class="activity-footer"><span>✦ Personal edition · no limits</span>${activeActivity.solved?'':`<button class="quiet-button" data-action="show-hint">Need a hint?</button>`}</div></div><aside class="activity-aside"><p class="eyebrow">COACH’S CUE</p><h3>Keep it practical.</h3><p>${esc(config.coach||'Look for a useful idea you can carry into your next game.')}</p>${id==='game-puzzles'?`<p style="margin-top:10px;border-top:1px solid #e7ebe1;padding-top:9px">Imported PGNs do not yet receive engine evaluation in this prototype.</p>`:''}</aside></div></section></div>`;
+  }
+  function checkChoice(value){
+    if(!activeActivity)return;
+    const {config}=activeActivity;
+    activeActivity.selected=value;
+    if(value===config.correct){activeActivity.solved=true;activeActivity.message=config.success||'Good choice.';}
+    else{activeActivity.solved=false;activeActivity.mistakes=(Number(activeActivity.mistakes)||0)+1;activeActivity.message='Not quite. Re-read the position and try another option.';}
+    renderActivityModal();
+  }
+  function finishActivity(){
+    if(!activeActivity)return;
+    const id=activeActivity.id;
+    clearIllustrativeData();
+    const moduleMinutes=modules.find(module=>module.id===id)?.time.match(/\d+/)?.[0];
+    const minutesEarned=Number(moduleMinutes)||5;
+    const trainingDate=recordTrainingScore(Math.round(100/(1+(Number(activeActivity.mistakes)||0))));
+    state.progress.sessions=(Number(state.progress.sessions)||0)+1;
+    state.progress.minutes=(Number(state.progress.minutes)||0)+minutesEarned;
+    state.progress.puzzles=(Number(state.progress.puzzles)||0)+1;
+    state.progress.completedToday=(Number(state.progress.completedToday)||0)+1;
+    state.progress.activity=Array.isArray(state.progress.activity)?state.progress.activity:[];
+    state.progress.activity.unshift({module:id,date:trainingDate,minutes:minutesEarned});
+    if(id==='tactics')state.tasks.tactics=true;
+    if(id==='endgame-lab')state.tasks.endgame=true;
+    persist();activeActivity=null;$('#modal-root').innerHTML='';render();showToast('Session saved to your local training log.');
+  }
+  function openPgnModal(initial=''){
+    $('#modal-root').innerHTML=`<div class="modal-backdrop" data-action="backdrop-close"><section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="pgn-title"><div class="modal-head"><div><div class="eyebrow">PRIVATE · LOCAL IMPORT</div><h2 id="pgn-title">Import your games</h2><p>Paste PGN text or choose a .pgn file. The parser runs in this browser.</p></div><button class="icon-button modal-close" data-action="close-modal" aria-label="Close">×</button></div><div class="form-field"><label for="pgn-input">PGN text</label><textarea id="pgn-input" placeholder="[Event &quot;Casual Game&quot;]\n[White &quot;Player&quot;]\n[Black &quot;Opponent&quot;]\n[Result &quot;1-0&quot;]\n\n1. e4 e5 2. Nf3 Nc6 1-0">${esc(initial)}</textarea><div class="form-help">Supports standard PGN headers, results, opening tags, dates, and move counts. Import up to 200 games per batch.</div></div><div class="drop-zone">Choose a PGN file from your device<input id="pgn-file" type="file" accept=".pgn,text/plain"></div><div id="pgn-error" class="error-text" aria-live="polite"></div><div class="modal-actions"><button class="quiet-button" data-action="close-modal">Cancel</button><button class="primary-button" data-action="submit-pgn">Import games</button></div></section></div>`;
+  }
+  function parsePgn(raw){
+    const text=String(raw||'').replace(/\r/g,'').trim();
+    if(!text)return [];
+    let blocks=text.split(/(?=^\s*\[Event\s)/m).map(b=>b.trim()).filter(Boolean);
+    if(!blocks.length)blocks=[text];
+    if(blocks.length===1&&!/^\s*\[/m.test(blocks[0]))return [];
+    return blocks.slice(0,200).map((block,index)=>{
+      const headers={};
+      const headerRe=/^\s*\[([A-Za-z0-9_]+)\s+"([^"]*)"\s*\]\s*$/gm;
+      let match;while((match=headerRe.exec(block))!==null)headers[match[1]]=match[2];
+      let body=block.replace(/^\s*\[[^\]]+\]\s*/gm,' ').replace(/\{[\s\S]*?\}/g,' ').replace(/;[^\n]*/g,' ').replace(/\$\d+/g,' ').replace(/\([^()]*\)/g,' ');
+      const resultMatch=body.match(/(?:^|\s)(1-0|0-1|1\/2-1\/2|\*)(?:\s|$)/);
+      body=body.replace(/\d+\.{1,3}/g,' ').replace(/1-0|0-1|1\/2-1\/2|\*/g,' ');
+      const moves=body.split(/\s+/).filter(token=>token&&!/^\d+\.?$/.test(token)&&token!=='e.p.');
+      let date=headers.Date||'';
+      if(/^\d{4}\.\d{2}\.\d{2}$/.test(date))date=date.replaceAll('.','-');
+      const gameResult=headers.Result||((resultMatch&&resultMatch[1])||'*');
+      return {id:`pgn-${Date.now()}-${index}`,white:headers.White||'White',black:headers.Black||'Black',whiteElo:headers.WhiteElo||'',blackElo:headers.BlackElo||'',result:gameResult==='*'?'—':gameResult,date:date||'—',moves:Math.ceil(moves.length/2),plies:moves.length,opening:headers.Opening||(headers.ECO?`ECO ${headers.ECO}`:'Not tagged'),eco:headers.ECO||'',event:headers.Event||'',timeControl:headers.TimeControl||'',pgn:block};
+    }).filter(game=>game.white!=='White'||game.black!=='Black'||game.moves>0||game.result!=='—');
+  }
+  const examplePgn=`[Event "Practice Game"]\n[Site "Squarewise"]\n[Date "2026.10.18"]\n[White "You"]\n[Black "Training Partner"]\n[Result "1-0"]\n[Opening "Italian Game"]\n[ECO "C50"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d4 exd4 6. cxd4 Bb4+ 7. Nc3 Nxe4 8. O-O Bxc3 9. bxc3 d5 10. Bd3 O-O 11. Re1 f5 12. c4 dxc4 13. Bxc4+ Kh8 1-0\n`;
+  function openSettings(){
+    $('#modal-root').innerHTML=`<div class="modal-backdrop" data-action="backdrop-close"><section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div class="modal-head"><div><div class="eyebrow">YOUR PRIVATE PROFILE</div><h2 id="settings-title">Personalize your room</h2><p>These preferences are saved only in this browser.</p></div><button class="icon-button modal-close" data-action="close-modal" aria-label="Close">×</button></div><div class="form-field"><label for="profile-name">Display name</label><input id="profile-name" type="text" maxlength="40" value="${esc(state.profile.name)}" placeholder="Chess Player"></div><div class="form-field"><label for="profile-rating">Current rating (optional)</label><input id="profile-rating" type="number" min="0" max="4000" value="${Number(state.profile.rating)||''}" placeholder="e.g. 1400"><div class="form-help">This setting personalizes the dashboard only; it is not verified from an account.</div></div><div class="form-field"><label for="profile-target">Next rating goal</label><input id="profile-target" type="number" min="0" max="4000" value="${Number(state.profile.target)||''}" placeholder="e.g. 1600"></div><div class="form-field"><label for="profile-focus">Current training focus</label><select id="profile-focus">${['Endgame technique','Tactical calculation','Opening consistency','Clock management','Defensive resourcefulness','Positional understanding'].map(f=>`<option ${state.profile.focus===f?'selected':''}>${f}</option>`).join('')}</select></div><div class="modal-actions"><button class="quiet-button" data-action="close-modal">Cancel</button><button class="primary-button" data-action="save-settings">Save profile</button></div></section></div>`;
+  }
+  function openOpeningModal(index=null){
+    const edit=index!==null, line=edit?state.repertoire[index]:{side:'White · 1.e4',name:'',line:'',note:''};
+    $('#modal-root').innerHTML=`<div class="modal-backdrop" data-action="backdrop-close"><section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="opening-title"><div class="modal-head"><div><div class="eyebrow">YOUR REPERTOIRE</div><h2 id="opening-title">${edit?'Edit opening line':'Add an opening line'}</h2><p>Save a line and one useful idea to remember.</p></div><button class="icon-button modal-close" data-action="close-modal" aria-label="Close">×</button></div><div class="form-field"><label for="opening-side">Side / matchup</label><input id="opening-side" value="${esc(line.side)}" placeholder="White · 1.e4"></div><div class="form-field"><label for="opening-name">Opening name</label><input id="opening-name" value="${esc(line.name)}" placeholder="e.g. Queen’s Gambit"></div><div class="form-field"><label for="opening-line">Moves / variation</label><textarea id="opening-line" style="min-height:85px" placeholder="1. d4 d5 2. c4 e6">${esc(line.line)}</textarea></div><div class="form-field"><label for="opening-note">Plan or reminder</label><textarea id="opening-note" style="min-height:70px;font-family:inherit" placeholder="What do you want to remember in this line?">${esc(line.note)}</textarea></div><div class="modal-actions"><button class="quiet-button" data-action="close-modal">Cancel</button><button class="primary-button" data-action="save-opening" data-index="${edit?index:''}">Save line</button></div></section></div>`;
+  }
+  function openStudyModal(id=null){
+    const existing=id?state.studies.find(s=>s.id===id):null;
+    const study=existing||{type:'Personal note',title:'',description:'',note:''};
+    $('#modal-root').innerHTML=`<div class="modal-backdrop" data-action="backdrop-close"><section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="study-title"><div class="modal-head"><div><div class="eyebrow">YOUR STUDY LIBRARY</div><h2 id="study-title">${existing?'Edit study note':'Create a study note'}</h2><p>Keep the takeaway short, concrete, and easy to recall.</p></div><button class="icon-button modal-close" data-action="close-modal" aria-label="Close">×</button></div><div class="form-field"><label for="study-name">Title</label><input id="study-name" maxlength="70" value="${esc(study.title)}" placeholder="e.g. Check forcing moves first"></div><div class="form-field"><label for="study-type">Theme</label><input id="study-type" maxlength="36" value="${esc(study.type)}" placeholder="Tactics · 5 min"></div><div class="form-field"><label for="study-desc">Short description</label><input id="study-desc" maxlength="110" value="${esc(study.description)}" placeholder="What is this note about?"></div><div class="form-field"><label for="study-note">Your takeaway</label><textarea id="study-note" style="min-height:100px;font-family:inherit" placeholder="Write the question, plan, or reminder you want to remember.">${esc(study.note)}</textarea></div><div class="modal-actions"><button class="quiet-button" data-action="close-modal">Cancel</button><button class="primary-button" data-action="save-study" data-id="${existing?esc(existing.id):''}">Save note</button></div></section></div>`;
+  }
+  function closeModal(){activeActivity=null;$('#modal-root').innerHTML='';}
+  function saveProfile(){
+    const name=$('#profile-name')?.value.trim()||'Chess Player';
+    const rating=parseInt($('#profile-rating')?.value,10);
+    const target=parseInt($('#profile-target')?.value,10);
+    state.profile.name=name;
+    state.profile.rating=Number.isFinite(rating)?Math.min(4000,Math.max(0,rating)):null;
+    state.profile.target=Number.isFinite(target)?Math.min(4000,Math.max(0,target)):null;
+    state.profile.focus=$('#profile-focus')?.value||state.profile.focus;
+    state.profile.customized=true;
+    persist();closeModal();render();showToast('Profile updated on this device.');
+  }
+  function doPgnImport(){
+    const input=$('#pgn-input')?.value||'';
+    const games=parsePgn(input);
+    if(!games.length){$('#pgn-error').textContent='No readable PGN games found. Check the headers and move text, or try the example PGN.';return;}
+    clearIllustrativeData();
+    state.importedGames=[...state.importedGames,...games].slice(-500);
+    state.demo=false;
+    state.tasks.review=true;
+    persist();closeModal();state.page='games';render();showToast(`${games.length} game${games.length===1?'':'s'} imported locally.`);
+  }
+  function saveOpening(index){
+    const data={side:$('#opening-side').value.trim()||'Personal line',name:$('#opening-name').value.trim()||'Untitled opening',line:$('#opening-line').value.trim(),note:$('#opening-note').value.trim(),reviewed:false};
+    if(index!==''&&index!==null){const idx=Number(index);state.repertoire[idx]={...state.repertoire[idx],...data};}
+    else{data.id=`open-${Date.now()}`;state.repertoire.push(data);}
+    persist();closeModal();render();showToast('Opening line saved locally.');
+  }
+  function saveStudy(id){
+    const data={type:$('#study-type').value.trim()||'Personal note',title:$('#study-name').value.trim()||'Untitled study',description:$('#study-desc').value.trim(),note:$('#study-note').value.trim(),updated:'Edited just now'};
+    if(id){const idx=state.studies.findIndex(s=>s.id===id);if(idx>=0)state.studies[idx]={...state.studies[idx],...data};}
+    else{data.id=`study-${Date.now()}`;state.studies.unshift(data);}
+    persist();closeModal();render();showToast('Study note saved locally.');
+  }
+  function exportData(){
+    const payload={product:'Squarewise personal chess room',exportedAt:new Date().toISOString(),profile:state.profile,progress:state.progress,tasks:state.tasks,importedGames:state.importedGames,repertoire:state.repertoire,studies:state.studies};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='squarewise-personal-data.json';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);showToast('Your local profile was exported.');
+  }
+  function resetData(){
+    const cloudSignedIn=window.SquarewiseCloud?.isSignedIn?.()||false;
+    const message=cloudSignedIn?'Reset this device’s local profile and sign out? Your Supabase cloud copy will remain available if you sign in again.':'Reset this local profile and remove imported games, notes, and progress from this browser?';
+    if(!window.confirm(message))return;
+    localStorage.removeItem(STORAGE_KEY);state=freshState();if(cloudSignedIn)window.SquarewiseCloud?.localReset?.();render();showToast('Local profile reset. Any cloud copy remains unchanged.');
+  }
+  function handleAction(action,element){
+    switch(action){
+      case 'toggle-menu':$('#sidebar').classList.toggle('open');break;
+      case 'start-session':setPage('training');openModule('guided-session');break;
+      case 'import-pgn':if(window.SquarewiseExtras?.openImportModal)window.SquarewiseExtras.openImportModal();else openPgnModal();break;
+      case 'load-example':if(window.SquarewiseExtras?.openImportModal)window.SquarewiseExtras.openImportModal(examplePgn);else openPgnModal(examplePgn);break;
+      case 'submit-pgn':doPgnImport();break;
+      case 'settings':openSettings();break;
+      case 'help':showHelp();break;
+      case 'close-modal':closeModal();break;
+      case 'backdrop-close':break;
+      case 'save-settings':saveProfile();break;
+      case 'add-opening':openOpeningModal();break;
+      case 'edit-opening':openOpeningModal(Number(element.dataset.index));break;
+      case 'save-opening':saveOpening(element.dataset.index);break;
+      case 'review-opening':{
+        const idx=Number(element.dataset.index);const line=state.repertoire[idx];
+        activeActivity={id:'opening-improver',config:{type:'choice',tag:'OPENING REVIEW',title:`Review · ${line.name}`,subtitle:`Recall this line: ${line.line}`,coach:line.note||'Say the line out loud, then recall the plan behind it.',options:[['recall','I can recall the main idea and one practical plan.'],['guess','I will memorize the moves without thinking about the position.']],correct:'recall',success:'Nice. Remember both the moves and the idea behind them.'},solved:false,message:'',selectedSquare:'',mistakes:0};renderActivityModal();break;
+      }
+      case 'add-study':openStudyModal();break;
+      case 'edit-study':openStudyModal(element.dataset.id);break;
+      case 'save-study':saveStudy(element.dataset.id);break;
+      case 'delete-study':if(window.confirm('Remove this study note from the local library?')){state.studies=state.studies.filter(s=>s.id!==element.dataset.id);persist();render();showToast('Study note removed.');}break;
+      case 'export-data':exportData();break;
+      case 'reset-data':resetData();break;
+      case 'complete-session':finishActivity();break;
+      case 'submit-answer':{
+        const value=($('#activity-answer')?.value||'').trim().toLowerCase();
+        activeActivity.answer=value;
+        if(value===(activeActivity.config.answer||'').toLowerCase()){activeActivity.solved=true;activeActivity.message=activeActivity.config.success;}
+        else{activeActivity.mistakes=(Number(activeActivity.mistakes)||0)+1;activeActivity.message='Not quite. Trace the knight’s two L-shaped jumps and try again.';}
+        renderActivityModal();break;
+      }
+      case 'show-hint':if(activeActivity){activeActivity.message=activeActivity.config.coach||'Look for a forcing move.';renderActivityModal();}break;
+      case 'clear-games':if(window.confirm('Remove imported PGNs from this local profile?')){state.importedGames=[];state.demo=false;persist();render();showToast('Imported game list cleared.');}break;
+      default:window.SquarewiseExtras?.handleAction?.(action,element);break;
+    }
+  }
+  function showHelp(){
+    $('#modal-root').innerHTML=`<div class="modal-backdrop" data-action="backdrop-close"><section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="help-title"><div class="modal-head"><div><div class="eyebrow">ABOUT THIS BUILD</div><h2 id="help-title">Your private chess room</h2><p>Inspired by modern game-based chess training, built as an original personal workspace.</p></div><button class="icon-button modal-close" data-action="close-modal" aria-label="Close">×</button></div><div class="info-strip"><span class="info-icon">✦</span><div><strong>All 19 training tools are open in this personal edition.</strong>No subscription gates or paid feature limits. Cloud accounts are optional.</div></div><p class="small-muted" style="line-height:1.7">Local autosave is always active. Optional cloud sync uses your own Supabase project for profile, progress, tasks, repertoire, study notes, and game-derived drills. Imported PGNs stay on this device and are not uploaded. Stockfish runs locally; read-only public game imports are available for Chess.com and Lichess. An optional Lichess token is used only for that request and is not saved. There is no cloud AI service. Engine lines are computer analysis, not guaranteed coaching.</p><div class="modal-actions"><button class="primary-button" data-action="close-modal">Got it</button></div></section></div>`;
+  }
+  document.addEventListener('click',(event)=>{
+    if(event.target.classList?.contains('modal-backdrop')){closeModal();return;}
+    const nav=event.target.closest('[data-page]');
+    if(nav){event.preventDefault();setPage(nav.dataset.page);return;}
+    const filter=event.target.closest('[data-filter]');
+    if(filter){state.moduleFilter=filter.dataset.filter;state.moduleQuery='';render();return;}
+    const task=event.target.closest('[data-task]');
+    if(task){const id=task.dataset.task;state.tasks[id]=!state.tasks[id];persist();render();return;}
+    const choice=event.target.closest('[data-choice]');
+    if(choice){checkChoice(choice.dataset.choice);return;}
+    const square=event.target.closest('[data-square]');
+    if(square&&activeActivity?.config.type==='board'&&!activeActivity.solved){
+      const sq=square.dataset.square;
+      if(!activeActivity.selectedSquare){if(sq==='c4'){activeActivity.selectedSquare=sq;activeActivity.message='';}else{activeActivity.message='Select the white knight on c4 first.';}}
+      else if(activeActivity.selectedSquare==='c4'&&sq==='e5'){activeActivity.solved=true;activeActivity.message=activeActivity.config.success;}
+      else if(sq==='c4'){activeActivity.selectedSquare='c4';activeActivity.message='Now choose a destination square.';}
+      else{activeActivity.selectedSquare='';activeActivity.mistakes=(Number(activeActivity.mistakes)||0)+1;activeActivity.message='That move does not create the fork. Look for a knight jump that checks the king and attacks the queen.';}
+      renderActivityModal();return;
+    }
+    const actionElement=event.target.closest('[data-action]');
+    if(actionElement){handleAction(actionElement.dataset.action,actionElement);return;}
+    const module=event.target.closest('[data-module]');
+    if(module){openModule(module.dataset.module);return;}
+  });
+  document.addEventListener('input',(event)=>{
+    if(event.target.id==='module-search'){
+      const query=event.target.value.toLowerCase().trim();
+      $$('.module-card').forEach(card=>{const category=card.dataset.category;const categoryMatch=state.moduleFilter==='All'||state.moduleFilter===category;const queryMatch=!query||card.dataset.search.includes(query);card.style.display=categoryMatch&&queryMatch?'flex':'none';});
+      const visible=$$('.module-card').filter(card=>card.style.display!=='none').length;const empty=$('#no-modules');if(empty)empty.style.display=visible?'none':'block';state.moduleQuery=event.target.value;
+    }
+  });
+  document.addEventListener('change',(event)=>{
+    if(event.target.id==='pgn-file'){
+      const file=event.target.files?.[0];if(!file)return;
+      const reader=new FileReader();reader.onload=()=>{const field=$('#pgn-input');if(field)field.value=String(reader.result||'');};reader.onerror=()=>{const err=$('#pgn-error');if(err)err.textContent='Could not read that file. Try pasting the PGN text instead.';};reader.readAsText(file);
+    }
+  });
+  document.addEventListener('keydown',(event)=>{
+    if(event.key==='Escape'&&$('#modal-root').innerHTML)closeModal();
+    if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();$('#global-search')?.focus();}
+    if(event.target.id==='global-search'&&event.key==='Enter'){
+      const query=event.target.value.trim().toLowerCase();
+      const match=modules.find(m=>(m.title+' '+m.desc+' '+m.cat).toLowerCase().includes(query));
+      if(match){setPage('training');setTimeout(()=>{const input=$('#module-search');if(input){input.value=query;input.dispatchEvent(new Event('input',{bubbles:true}));}},30);openModule(match.id);}
+      else if(query){setPage('training');setTimeout(()=>{const input=$('#module-search');if(input){input.value=query;input.dispatchEvent(new Event('input',{bubbles:true}));}},30);}
+    }
+  });
+  window.SquarewiseAPI={get state(){return state;},render,setPage,showToast,parsePgn,persist,clearIllustrativeData,recordTrainingScore,openPgnModal,get modules(){return modules;}};
+  function initialize(){
+    if(!Array.isArray(state.repertoire)||!state.repertoire.length)state.repertoire=JSON.parse(JSON.stringify(defaultRepertoire));
+    if(!Array.isArray(state.studies))state.studies=JSON.parse(JSON.stringify(defaultStudies));
+    render();
+  }
+  initialize();
+})();
+</script>
+<script src="./squarewise-config.js"></script>
+<script src="./app-advanced.js"></script>
+<script src="./cloud-sync.js"></script>
+</body>
+</html>
